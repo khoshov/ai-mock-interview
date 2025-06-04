@@ -1,0 +1,15 @@
+# .ruff.toml
+#макс длинна
+line-length = 95
+
+#отступ
+indent-width = 4
+
+#версия python
+target-version = "py312"
+
+#категории ошибок
+[lint]
+select = ["E", "F", "I", "B", "UP"]  # ошибки, формат, isort, bugbear, pyupgrade
+
+ignore = []
