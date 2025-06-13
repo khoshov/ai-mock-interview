@@ -4,6 +4,8 @@ FROM python:3.12.11-slim-bookworm
 # Install UV (ultra-fast Python package installer) from Astral.sh
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Disable creation of .pyc/.pyo files
+ENV PYTHONDONTWRITEBYTECODE=1
 # Ensure Python output is sent straight to terminal without buffering
 ENV PYTHONUNBUFFERED=1
 
