@@ -1,5 +1,7 @@
 from django.db import models
-from core.models import Category
+
+from .core.models import Category
+
 
 class Question(models.Model):
     QUESTION_TYPES = [
