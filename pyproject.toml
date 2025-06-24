@@ -10,7 +10,7 @@ dependencies = [
     "asgiref==3.8.1",
     "django-environ==0.12.0",
     "ruff==0.11.13",
-    "sqlparse==0.5.3"
+    "sqlparse==0.5.3",
     "channels-redis>=4.2.1",
     "channels[daphne]>=4.2.2",
     "django-mptt>=0.17.0",
