@@ -9,13 +9,10 @@
 </head>
 <body>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-6 mx-auto mt-5 mt-center">
-                <h1 id="text">{{ text }}</h1>
-            </div>
-        </div>
-    </div>
+    <div id="chat-log"></div>
+    <input id="chat-message-input" type="text" size="100">
+    <button id="chat-message-submit">Send</button>
+    
 
     <script src="{% static 'main.js' %}"></script>
 </body>

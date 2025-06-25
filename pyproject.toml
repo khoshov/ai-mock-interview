@@ -15,4 +15,6 @@ dependencies = [
     "channels[daphne]>=4.2.2",
     "django-mptt>=0.17.0",
     "langchain-openai>=0.3.25",
+    "langchain>=0.3.26",
+    "langchain-community>=0.3.26",
 ]
