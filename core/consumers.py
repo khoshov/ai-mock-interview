@@ -1,56 +1,66 @@
 import json
-from random import randint
-from asyncio import sleep
+
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+from config.settings import OPENAI_API_KEY
+
+
+# Инициализация модели
+llm = ChatOpenAI(model="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY)
+
+# Промпт для чата
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "Ты дружелюбный помощник."),
+        MessagesPlaceholder(variable_name="messages"),
+    ]
+)
+
+# История сообщений
+history_store = {}
+
+
+def get_history(session_id):
+    if session_id not in history_store:
+        history_store[session_id] = InMemoryChatMessageHistory()
+    return history_store[session_id]
+
+
+# Цепочка с историей сообщений
+chain = RunnableWithMessageHistory(
+    prompt | llm,
+    get_session_history=get_history,
+    input_messages_key="messages",
+    history_messages_key="messages",
+)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.session_id = self.scope["session"].session_key or self.channel_name
         await self.accept()
 
-        for i in range(1000):
-            num = randint(1, 100)
-            await self.send(json.dumps({'value': num}))
-            await sleep(1)
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        user_message = data.get("message", "")
 
-# import json
-# from channels.generic.websocket import AsyncWebsocketConsumer
-# from langchain.chat_models import ChatOpenAI
-# from langchain.callbacks.base import AsyncCallbackHandler
+        # Получаем историю
+        history = get_history(self.session_id)
+        history.add_user_message(user_message)
 
+        # Получаем ответ
+        response = await chain.ainvoke(
+            {"messages": history.messages},
+            config={"configurable": {"session_id": self.session_id}},
+        )
+        answer = response.content
 
-# class WSCallback(AsyncCallbackHandler):
-#     """Передаёт каждый токен прямо в WebSocket."""
-#     def __init__(self, ws_consumer):
-#         self.ws = ws_consumer
+        history.add_ai_message(answer)
 
-#     async def on_llm_new_token(self, token: str, **kwargs):
-#         # Отправляем как текст; можно упаковать в JSON {type:"token", data:token}
-#         await self.ws.send(text_data=token)
-
-
-# class ChatConsumer(AsyncWebsocketConsumer):
-#     async def connect(self):
-#         await self.accept()
-
-#     async def receive(self, text_data=None, bytes_data=None):
-#         """
-#         Принимаем вопрос от клиента, запускаем LLM со стримингом.
-#         После завершения шлём специальный маркер — клиент поймёт, что вывод закончен.
-#         """
-#         user_prompt = text_data.strip()
-
-#         callback = WSCallback(self)
-
-#         llm = ChatOpenAI(
-#             model="gpt-4o-mini",
-#             streaming=True,
-#             temperature=0.7,
-#             callbacks=[callback],
-#         )
-
-#         # agenerate — асинхронный вызов; ответ целиком нам даже не нужен:
-#         await llm.agenerate([[user_prompt]])
-
-#         await self.send(text_data="[END]")
+        await self.send(text_data=json.dumps({"answer": answer}))
