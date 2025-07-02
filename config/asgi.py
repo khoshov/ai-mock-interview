@@ -15,7 +15,7 @@ from channels.auth import AuthMiddlewareStack
 from core.routing import ws_urlpatterns
 
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 # application = get_asgi_application()
 application = ProtocolTypeRouter({
