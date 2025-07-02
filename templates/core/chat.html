@@ -1,0 +1,71 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Чат{% if session %} - {{ session.id }}{% endif %} | AI Mock Interview{% endblock %}
+
+{% block content %}
+<div class="chat-container" id="chat-container">
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <h5 class="chat-title mb-0">
+            AI Mock Interview Chat
+            {% if session_id %}
+                <small class="text-light opacity-75">{{ session_id|slice:":8" }}...</small>
+            {% endif %}
+        </h5>
+        <div>
+            <span id="connection-status" class="connection-status disconnected">Подключение...</span>
+        </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="messages-container" id="messages">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {{ message.sender }}-message">
+                    <div class="message-content">{{ message.text }}</div>
+                    <div class="message-time">{{ message.created|date:"H:i" }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="message system-message">
+                <div class="message-content">
+                    Добро пожаловать в AI Mock Interview! 🎯
+                    <br><br>
+                    Я помогу вам подготовиться к техническим интервью. Задавайте вопросы, и я дам развернутые ответы с примерами и советами.
+                    <br><br>
+                    Начните с вопроса или попросите меня провести мок-интервью по интересующей вас теме!
+                </div>
+                <div class="message-time">{{ "now"|date:"H:i" }}</div>
+            </div>
+        {% endif %}
+        
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typing-indicator">
+            AI печатает...
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input">
+        <textarea 
+            id="message-input" 
+            class="message-input" 
+            placeholder="Введите ваш вопрос..."
+            rows="1"
+        ></textarea>
+        <button id="send-button" class="send-button">
+            Отправить
+        </button>
+    </div>
+</div>
+
+<!-- Session Info for JavaScript -->
+<script>
+    window.chatSessionId = {% if session_id %}'{{ session_id }}'{% else %}null{% endif %};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %}

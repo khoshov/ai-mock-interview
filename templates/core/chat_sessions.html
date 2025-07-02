@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+
+{% block title %}История чатов | AI Mock Interview{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>История чатов</h2>
+                <a href="{% url 'core:new_chat' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Новый чат
+                </a>
+            </div>
+
+            <!-- Sessions List -->
+            {% if sessions %}
+                <div class="row">
+                    {% for session in sessions %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="card-title mb-0">
+                                        Сессия {{ session.id|slice:":8" }}...
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ session.created|date:"d.m.Y H:i" }}
+                                    </small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <span class="badge bg-light text-dark">
+                                        {{ session.messages.count }} сообщений
+                                    </span>
+                                    <span class="badge bg-light text-dark">
+                                        {{ session.created|timesince }} назад
+                                    </span>
+                                </div>
+
+                                {% if session.messages.last %}
+                                <p class="card-text text-muted small mb-3">
+                                    Последнее сообщение: "{{ session.messages.last.text|truncatechars:80 }}"
+                                </p>
+                                {% endif %}
+
+                                <div class="d-grid">
+                                    <a href="{% url 'core:chat' session.id %}" class="btn btn-outline-primary">
+                                        Продолжить чат
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination placeholder -->
+                {% if sessions|length >= 20 %}
+                <div class="text-center mt-4">
+                    <p class="text-muted">Показаны последние сессии</p>
+                </div>
+                {% endif %}
+
+            {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-comments fa-3x text-muted"></i>
+                    </div>
+                    <h4 class="text-muted mb-3">Пока нет чатов</h4>
+                    <p class="text-muted mb-4">
+                        Начните свой первый разговор с AI для подготовки к интервью
+                    </p>
+                    <a href="{% url 'core:new_chat' %}" class="btn btn-primary btn-lg">
+                        Создать первый чат
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

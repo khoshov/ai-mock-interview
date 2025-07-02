@@ -1,0 +1,112 @@
+{% extends 'core/base.html' %}
+
+{% block title %}AI Mock Interview - Подготовка к техническим интервью{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Hero Section -->
+            <div class="text-center mb-5">
+                <h1 class="display-4 fw-bold mb-3">🤖 AI Mock Interview</h1>
+                <p class="lead text-muted mb-4">
+                    Интерактивный помощник для подготовки к техническим интервью с поддержкой голосового взаимодействия
+                </p>
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{% url 'core:new_chat' %}" class="btn btn-primary btn-lg px-4">
+                        Начать новый чат
+                    </a>
+                    <a href="{% url 'core:chat_sessions' %}" class="btn btn-outline-secondary btn-lg px-4">
+                        История чатов
+                    </a>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="row mb-5">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="text-primary mb-3">
+                                <i class="fas fa-microphone fa-2x"></i>
+                            </div>
+                            <h5 class="card-title">🎙️ Голосовое взаимодействие</h5>
+                            <p class="card-text text-muted">
+                                Вопросы озвучиваются в реальном времени, распознавание устных ответов
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="text-success mb-3">
+                                <i class="fas fa-brain fa-2x"></i>
+                            </div>
+                            <h5 class="card-title">🧠 Умная генерация</h5>
+                            <p class="card-text text-muted">
+                                LLM генерирует релевантные вопросы и адаптирует сложность под ваш уровень
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="text-info mb-3">
+                                <i class="fas fa-code fa-2x"></i>
+                            </div>
+                            <h5 class="card-title">📚 Тематические направления</h5>
+                            <p class="card-text text-muted">
+                                Python, Backend, System Design, Frontend, DevOps и другие технологии
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="text-warning mb-3">
+                                <i class="fas fa-chart-line fa-2x"></i>
+                            </div>
+                            <h5 class="card-title">📊 Детальная аналитика</h5>
+                            <p class="card-text text-muted">
+                                Анализ ответов с развернутой обратной связью и рекомендациями
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Sessions -->
+            {% if recent_sessions %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Недавние сессии</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for session in recent_sessions %}
+                        <a href="{% url 'core:chat' session.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Сессия {{ session.id|slice:":8" }}...</h6>
+                                <small class="text-muted">{{ session.created|timesince }} назад</small>
+                            </div>
+                            <p class="mb-1 text-muted">
+                                Сообщений: {{ session.messages.count }}
+                            </p>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'core:chat_sessions' %}" class="btn btn-outline-primary">
+                            Показать все сессии
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
