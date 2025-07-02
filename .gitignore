@@ -171,4 +171,7 @@ poetry.toml
 pyrightconfig.json
 
 # Docker volumes
-pgdata
+postgres_data
+redis_data
+static_volume
+media_volume
