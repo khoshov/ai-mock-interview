@@ -1,6 +1,16 @@
+# =============================================================================
+# AI Mock Interview - Docker Compose Configuration
+# =============================================================================
+
 services:
+  # =============================================================================
+  # Django Application Server
+  # =============================================================================
   django:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_mock_interview_django
     ports:
       - "8000:8000"
     env_file:
@@ -8,17 +18,89 @@ services:
     command: uv run manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai_mock_interview_network
+
+  # =============================================================================
+  # PostgreSQL Database
+  # =============================================================================
   postgres:
-    image: postgres
+    image: postgres:15-alpine
+    container_name: ai_mock_interview_postgres
     ports:
       - "5432:5432"
     env_file:
       - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ai_mock_interview_network
+
+  # =============================================================================
+  # Redis Cache & Message Broker
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ai_mock_interview_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ai_mock_interview_network
+
+# =============================================================================
+# Named Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: ai_mock_interview_postgres_data
+    
+  redis_data:
+    driver: local
+    name: ai_mock_interview_redis_data
+    
+  static_volume:
+    driver: local
+    name: ai_mock_interview_static
+    
+  media_volume:
+    driver: local
+    name: ai_mock_interview_media
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  ai_mock_interview_network:
+    driver: bridge
+    name: ai_mock_interview_network
