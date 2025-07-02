@@ -1,0 +1,104 @@
+# =============================================================================
+# RUFF CONFIGURATION
+# =============================================================================
+
+# General settings
+line-length = 88
+target-version = "py312"
+
+# Files to exclude from linting
+exclude = [
+    "migrations",
+    "*/migrations/*",
+    "__pycache__",
+    "*.pyc",
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+# =============================================================================
+# LINTING RULES
+# =============================================================================
+
+[lint]
+# Rule categories to enable
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "DJ",  # flake8-django
+    "PIE", # flake8-pie
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+
+# Rules to ignore
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "DJ001",  # avoid using `null=True` on string-based fields
+    "SIM108", # use ternary operator instead of if-else-block
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# =============================================================================
+# IMPORT SORTING (ISORT)
+# =============================================================================
+
+[lint.isort]
+# Import section order
+section-order = [
+    "future",
+    "standard-library", 
+    "third-party",
+    "django",
+    "first-party",
+    "local-folder"
+]
+
+# Custom sections
+[lint.isort.sections]
+"django" = ["django"]
+
+# =============================================================================
+# NAMING CONVENTIONS
+# =============================================================================
+
+[lint.pep8-naming]
+# Allow Pydantic's `@validator` decorator to trigger class method treatment
+classmethod-decorators = [
+    "classmethod",
+    "pydantic.validator",
+    "pydantic.root_validator",
+]
+
+# =============================================================================
+# FORMATTING
+# =============================================================================
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces around operators
+indent-style = "space"
+
+# Skip magic trailing comma for single-element collections
+skip-magic-trailing-comma = false
+
+# Prefer splitting lines by parentheses over backslashes
+line-ending = "auto"
