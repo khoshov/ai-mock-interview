@@ -29,7 +29,7 @@ help:
 	@echo "  clean             - Clean up containers and volumes"
 
 up:
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) up
 
 down:
 	$(DOCKER_COMPOSE) down

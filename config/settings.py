@@ -39,10 +39,17 @@ DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 # =============================================================================
+# API KEYS
+# =============================================================================
+
+OPENAI_API_KEY = env("OPENAI_API_KEY")
+
+# =============================================================================
 # APPLICATION DEFINITION
 # =============================================================================
 
 DJANGO_APPS = [
+    "daphne",  # Must be first for ASGI
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -52,7 +59,9 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "channels",
     "mptt",
+    "widget_tweaks",
 ]
 
 LOCAL_APPS = [
@@ -82,6 +91,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 # =============================================================================
 # TEMPLATES CONFIGURATION
@@ -109,6 +119,49 @@ TEMPLATES = [
 
 DATABASES = {
     "default": env.db(),
+}
+
+# =============================================================================
+# REDIS CONFIGURATION
+# =============================================================================
+
+REDIS_HOST = env("REDIS_HOST") or "redis"
+REDIS_PORT = env.int("REDIS_PORT") or 6379
+REDIS_PASSWORD = env("REDIS_PASSWORD") or ""
+
+# Build Redis URL with optional password
+if REDIS_PASSWORD:
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+else:
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
+# =============================================================================
+# CHANNELS CONFIGURATION
+# =============================================================================
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
+
+# =============================================================================
+# CACHE CONFIGURATION
+# =============================================================================
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "ai_mock_interview",
+        "TIMEOUT": 300,
+    }
 }
 
 # =============================================================================
@@ -166,6 +219,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # LOGGING CONFIGURATION
 # =============================================================================
 
+# Ensure logs directory exists
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -186,7 +243,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs" / "django.log",
+            "filename": LOGS_DIR / "django.log",
             "formatter": "verbose",
         },
     },
