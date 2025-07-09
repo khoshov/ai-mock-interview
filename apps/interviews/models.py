@@ -3,7 +3,7 @@ from questions.models import Question
 from django.contrib.auth.models import User
 from django.db import models
 
-from apps.core.models import Category
+from core.models import Category
 
 
 class InterviewSession(models.Model):
@@ -39,6 +39,7 @@ class Answer(models.Model):
     expert_answer = models.ForeignKey(ExpertAnswer, on_delete=models.CASCADE)
     llm_score = models.FloatField(null=True, blank=True, help_text="Оценка соответствия в процентах")
     llm_comment = models.TextField(blank=True, help_text="Что не раскрыто в ответе пользователя")
+    detailed_analysis = models.JSONField(default=dict, blank=True, help_text="Детальный анализ ответа по критериям")
     is_valid = models.BooleanField(default=True, help_text="True — ответ релевантен, False — пустой или не по теме")
     created_at = models.DateTimeField(auto_now_add=True)
 
