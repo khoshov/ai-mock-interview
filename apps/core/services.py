@@ -1,26 +1,26 @@
 import random
 from typing import Any
 
+from interviews.models import Answer, ExpertAnswer, InterviewSession
+from questions.models import Question
+
 from django.contrib.auth.models import User
 from django.db.models import Avg
 
 from .models import Category
-from interviews.models import Answer, ExpertAnswer, InterviewSession
-from questions.models import Question
 
 
 class InterviewService:
-
     def __init__(self, session_id: str):
         self.session_id = session_id
         self.current_session: InterviewSession | None = None
         self.asked_questions = set()
 
-    def start_interview(self, user: User, category: Category, difficulty: str) -> InterviewSession:
+    def start_interview(
+        self, user: User, category: Category, difficulty: str
+    ) -> InterviewSession:
         self.current_session = InterviewSession.objects.create(
-            user=user,
-            category=category,
-            difficulty=difficulty
+            user=user, category=category, difficulty=difficulty
         )
         self.asked_questions.clear()
         return self.current_session
@@ -31,10 +31,8 @@ class InterviewService:
 
         available_questions = Question.objects.filter(
             category=self.current_session.category,
-            difficulty=self.current_session.difficulty
-        ).exclude(
-            id__in=self.asked_questions
-        )
+            difficulty=self.current_session.difficulty,
+        ).exclude(id__in=self.asked_questions)
 
         if not available_questions.exists():
             return None
@@ -48,8 +46,7 @@ class InterviewService:
             raise ValueError("No active interview session")
 
         expert_answer, created = ExpertAnswer.objects.get_or_create(
-            question=question,
-            defaults={'text': question.correct_answer}
+            question=question, defaults={"text": question.correct_answer}
         )
 
         answer = Answer.objects.create(
@@ -57,7 +54,7 @@ class InterviewService:
             user=self.current_session.user,
             question=question,
             user_answer=user_answer,
-            expert_answer=expert_answer
+            expert_answer=expert_answer,
         )
 
         return answer
@@ -65,6 +62,7 @@ class InterviewService:
     def finish_interview(self):
         if self.current_session:
             from django.utils import timezone
+
             self.current_session.end_time = timezone.now()
             self.current_session.save()
 
@@ -76,21 +74,20 @@ class InterviewService:
         total_questions = answers.count()
 
         if total_questions == 0:
-            return {
-                'total_questions': 0,
-                'avg_score': 0,
-                'valid_answers': 0
-            }
+            return {"total_questions": 0, "avg_score": 0, "valid_answers": 0}
 
         valid_answers = answers.filter(is_valid=True).count()
-        avg_score = answers.filter(llm_score__isnull=False).aggregate(
-            avg=Avg('llm_score')
-        )['avg'] or 0
+        avg_score = (
+            answers.filter(llm_score__isnull=False).aggregate(avg=Avg("llm_score"))[
+                "avg"
+            ]
+            or 0
+        )
 
         return {
-            'total_questions': total_questions,
-            'avg_score': round(avg_score, 2),
-            'valid_answers': valid_answers
+            "total_questions": total_questions,
+            "avg_score": round(avg_score, 2),
+            "valid_answers": valid_answers,
         }
 
 

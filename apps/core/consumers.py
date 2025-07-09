@@ -28,11 +28,9 @@ prompt = ChatPromptTemplate.from_messages(
 # История сообщений
 history_store = {}
 
+
 def markdown_to_html(text):
-    return markdown.markdown(
-        text,
-        extensions=['fenced_code', 'codehilite']
-    )
+    return markdown.markdown(text, extensions=["fenced_code", "codehilite"])
 
 
 def get_history(session_id):
@@ -55,9 +53,10 @@ async def stream_llm_response(chain, messages, session_id):
         {"messages": messages},
         config={"configurable": {"session_id": session_id}},
     ):
-        if hasattr(chunk, 'content') and chunk.content:
+        if hasattr(chunk, "content") and chunk.content:
             yield chunk.content
             await asyncio.sleep(0.01)
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -72,7 +71,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         history.add_user_message(user_message)
 
         full_answer = ""
-        async for chunk_text in stream_llm_response(chain, history.messages, self.session_id):
+        async for chunk_text in stream_llm_response(
+            chain, history.messages, self.session_id
+        ):
             full_answer += chunk_text
             await self.send(text_data=json.dumps({"answer_chunk": chunk_text}))
         await self.send(text_data=json.dumps({"answer_chunk": "END_OF_ANSWER"}))

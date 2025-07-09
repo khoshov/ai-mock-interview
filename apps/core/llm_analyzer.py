@@ -11,12 +11,9 @@ from config.settings import OPENAI_API_KEY
 
 
 class LLMAnswerAnalyzer:
-
     def __init__(self):
         self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo",
-            openai_api_key=OPENAI_API_KEY,
-            temperature=0.3
+            model="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY, temperature=0.3
         )
 
         self.analysis_prompt = ChatPromptTemplate.from_template("""
@@ -99,7 +96,7 @@ class LLMAnswerAnalyzer:
 Дай КРАТКУЮ конструктивную обратную связь кандидату (максимум 3-4 предложения):
 
 1. КРАТКОЕ РЕЗЮМЕ: Общая оценка ответа в 1-2 предложениях
-2. ГЛАВНАЯ ПРОБЛЕМА: Самый важный недостаток (если есть) 
+2. ГЛАВНАЯ ПРОБЛЕМА: Самый важный недостаток (если есть)
 3. КЛЮЧЕВАЯ РЕКОМЕНДАЦИЯ: Одна конкретная рекомендация для улучшения
 
 ВАЖНО:
@@ -111,47 +108,72 @@ class LLMAnswerAnalyzer:
 Пиши от первого лица, как настоящий интервьюер.
 """)
 
-    async def analyze_answer(self, question: str, expert_answer: str, user_answer: str) -> dict[str, Any]:
+    async def analyze_answer(
+        self, question: str, expert_answer: str, user_answer: str
+    ) -> dict[str, Any]:
         if not user_answer or not user_answer.strip():
             return {
                 "score": 0,
                 "comment": "Ответ пустой",
                 "is_valid": False,
                 "detailed_analysis": {
-                    "technical_accuracy": {"score": 0, "positive": "", "negative": "Ответ не предоставлен", "recommendation": "Предоставьте ответ на вопрос"},
-                    "completeness": {"score": 0, "positive": "", "negative": "Ответ не предоставлен", "recommendation": "Предоставьте ответ на вопрос"},
-                    "clarity": {"score": 0, "positive": "", "negative": "Ответ не предоставлен", "recommendation": "Предоставьте ответ на вопрос"},
-                    "depth": {"score": 0, "positive": "", "negative": "Ответ не предоставлен", "recommendation": "Предоставьте ответ на вопрос"},
-                    "practical_application": {"score": 0, "positive": "", "negative": "Ответ не предоставлен", "recommendation": "Предоставьте ответ на вопрос"},
+                    "technical_accuracy": {
+                        "score": 0,
+                        "positive": "",
+                        "negative": "Ответ не предоставлен",
+                        "recommendation": "Предоставьте ответ на вопрос",
+                    },
+                    "completeness": {
+                        "score": 0,
+                        "positive": "",
+                        "negative": "Ответ не предоставлен",
+                        "recommendation": "Предоставьте ответ на вопрос",
+                    },
+                    "clarity": {
+                        "score": 0,
+                        "positive": "",
+                        "negative": "Ответ не предоставлен",
+                        "recommendation": "Предоставьте ответ на вопрос",
+                    },
+                    "depth": {
+                        "score": 0,
+                        "positive": "",
+                        "negative": "Ответ не предоставлен",
+                        "recommendation": "Предоставьте ответ на вопрос",
+                    },
+                    "practical_application": {
+                        "score": 0,
+                        "positive": "",
+                        "negative": "Ответ не предоставлен",
+                        "recommendation": "Предоставьте ответ на вопрос",
+                    },
                     "overall_score": 0,
                     "key_missing_points": ["Ответ не предоставлен"],
                     "strengths": [],
-                    "priority_improvements": ["Предоставить ответ на вопрос"]
-                }
+                    "priority_improvements": ["Предоставить ответ на вопрос"],
+                },
             }
 
         response = await self.llm.ainvoke(
             self.analysis_prompt.format(
-                question=question,
-                expert_answer=expert_answer,
-                user_answer=user_answer
+                question=question, expert_answer=expert_answer, user_answer=user_answer
             )
         )
 
         try:
-            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response.content, re.DOTALL)
             if json_match:
                 result = json.loads(json_match.group())
-                
+
                 # Ensure overall_score is within bounds
                 overall_score = max(0, min(100, result.get("overall_score", 0)))
-                
+
                 # For backward compatibility, still provide old format
                 return {
                     "score": overall_score,
                     "comment": self._generate_summary_comment(result),
                     "is_valid": result.get("is_valid", True),
-                    "detailed_analysis": result
+                    "detailed_analysis": result,
                 }
         except (json.JSONDecodeError, AttributeError):
             pass
@@ -161,26 +183,51 @@ class LLMAnswerAnalyzer:
             "comment": "Не удалось проанализировать ответ",
             "is_valid": True,
             "detailed_analysis": {
-                "technical_accuracy": {"score": 0, "positive": "", "negative": "Ошибка анализа", "recommendation": "Попробуйте переформулировать ответ"},
-                "completeness": {"score": 0, "positive": "", "negative": "Ошибка анализа", "recommendation": "Попробуйте переформулировать ответ"},
-                "clarity": {"score": 0, "positive": "", "negative": "Ошибка анализа", "recommendation": "Попробуйте переформулировать ответ"},
-                "depth": {"score": 0, "positive": "", "negative": "Ошибка анализа", "recommendation": "Попробуйте переформулировать ответ"},
-                "practical_application": {"score": 0, "positive": "", "negative": "Ошибка анализа", "recommendation": "Попробуйте переформулировать ответ"},
+                "technical_accuracy": {
+                    "score": 0,
+                    "positive": "",
+                    "negative": "Ошибка анализа",
+                    "recommendation": "Попробуйте переформулировать ответ",
+                },
+                "completeness": {
+                    "score": 0,
+                    "positive": "",
+                    "negative": "Ошибка анализа",
+                    "recommendation": "Попробуйте переформулировать ответ",
+                },
+                "clarity": {
+                    "score": 0,
+                    "positive": "",
+                    "negative": "Ошибка анализа",
+                    "recommendation": "Попробуйте переформулировать ответ",
+                },
+                "depth": {
+                    "score": 0,
+                    "positive": "",
+                    "negative": "Ошибка анализа",
+                    "recommendation": "Попробуйте переформулировать ответ",
+                },
+                "practical_application": {
+                    "score": 0,
+                    "positive": "",
+                    "negative": "Ошибка анализа",
+                    "recommendation": "Попробуйте переформулировать ответ",
+                },
                 "overall_score": 0,
                 "key_missing_points": ["Ошибка анализа"],
                 "strengths": [],
-                "priority_improvements": ["Попробуйте переформулировать ответ"]
-            }
+                "priority_improvements": ["Попробуйте переформулировать ответ"],
+            },
         }
 
     def _generate_summary_comment(self, detailed_analysis: dict[str, Any]) -> str:
         """Generate a summary comment from detailed analysis for backward compatibility."""
         if not detailed_analysis:
             return "Анализ недоступен"
-        
+
         priority_improvements = detailed_analysis.get("priority_improvements", [])
         key_missing = detailed_analysis.get("key_missing_points", [])
-        
+
         if priority_improvements:
             return f"Приоритетные области для улучшения: {', '.join(priority_improvements[:2])}"
         elif key_missing:
@@ -188,9 +235,11 @@ class LLMAnswerAnalyzer:
         else:
             return "Анализ завершен"
 
-    async def generate_feedback(self, question: str, user_answer: str, analysis: dict[str, Any]) -> AsyncGenerator[str, None]:
-        detailed_analysis = analysis.get('detailed_analysis', {})
-        
+    async def generate_feedback(
+        self, question: str, user_answer: str, analysis: dict[str, Any]
+    ) -> AsyncGenerator[str, None]:
+        detailed_analysis = analysis.get("detailed_analysis", {})
+
         # Format detailed analysis for the prompt
         detailed_analysis_text = self._format_detailed_analysis(detailed_analysis)
 
@@ -198,10 +247,10 @@ class LLMAnswerAnalyzer:
             self.feedback_prompt.format(
                 question=question,
                 user_answer=user_answer,
-                detailed_analysis=detailed_analysis_text
+                detailed_analysis=detailed_analysis_text,
             )
         ):
-            if hasattr(chunk, 'content') and chunk.content:
+            if hasattr(chunk, "content") and chunk.content:
                 yield chunk.content
                 await asyncio.sleep(0.01)
 
@@ -209,18 +258,18 @@ class LLMAnswerAnalyzer:
         """Format detailed analysis for the feedback prompt."""
         if not detailed_analysis:
             return "Анализ недоступен"
-        
+
         formatted_sections = []
-        
+
         # Criteria scores and feedback
         criteria = [
             ("Техническая точность", "technical_accuracy"),
             ("Полнота", "completeness"),
             ("Ясность", "clarity"),
             ("Глубина понимания", "depth"),
-            ("Практическое применение", "practical_application")
+            ("Практическое применение", "practical_application"),
         ]
-        
+
         formatted_sections.append("ОЦЕНКИ ПО КРИТЕРИЯМ:")
         for name, key in criteria:
             criterion = detailed_analysis.get(key, {})
@@ -228,7 +277,7 @@ class LLMAnswerAnalyzer:
             positive = criterion.get("positive", "")
             negative = criterion.get("negative", "")
             recommendation = criterion.get("recommendation", "")
-            
+
             formatted_sections.append(f"{name}: {score}/100")
             if positive:
                 formatted_sections.append(f"  ✓ {positive}")
@@ -236,30 +285,30 @@ class LLMAnswerAnalyzer:
                 formatted_sections.append(f"  ✗ {negative}")
             if recommendation:
                 formatted_sections.append(f"  → {recommendation}")
-        
+
         # Overall score
         overall_score = detailed_analysis.get("overall_score", 0)
         formatted_sections.append(f"\nОБЩАЯ ОЦЕНКА: {overall_score}/100")
-        
+
         # Strengths
         strengths = detailed_analysis.get("strengths", [])
         if strengths:
             formatted_sections.append("\nСИЛЬНЫЕ СТОРОНЫ:")
             for strength in strengths:
                 formatted_sections.append(f"  ✓ {strength}")
-        
+
         # Key missing points
         key_missing = detailed_analysis.get("key_missing_points", [])
         if key_missing:
             formatted_sections.append("\nКЛЮЧЕВЫЕ УПУЩЕНИЯ:")
             for missing in key_missing:
                 formatted_sections.append(f"  ✗ {missing}")
-        
+
         # Priority improvements
         priority_improvements = detailed_analysis.get("priority_improvements", [])
         if priority_improvements:
             formatted_sections.append("\nПРИОРИТЕТНЫЕ ОБЛАСТИ ДЛЯ УЛУЧШЕНИЯ:")
             for improvement in priority_improvements:
                 formatted_sections.append(f"  → {improvement}")
-        
+
         return "\n".join(formatted_sections)

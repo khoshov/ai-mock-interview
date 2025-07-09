@@ -1,17 +1,20 @@
 import asyncio
 import json
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from interviews.models import Answer
 
 from django.contrib.auth import get_user_model
 
 from .llm_analyzer import LLMAnswerAnalyzer
 from .models import Category
 from .services import InterviewSessionStore
-from interviews.models import Answer
-from questions.models import Question
+
+if TYPE_CHECKING:
+    from questions.models import Question
 
 
 class InterviewState(Enum):
@@ -23,7 +26,6 @@ class InterviewState(Enum):
 
 
 class InterviewConsumer(AsyncWebsocketConsumer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.session_id = None
@@ -73,7 +75,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             await self.send_message("Ошибка обработки сообщения.")
 
     async def handle_setup(self, message: str):
-        if message.lower() in ['старт', 'начать', 'start']:
+        if message.lower() in ["старт", "начать", "start"]:
             await self.setup_interview()
         else:
             await self.send_message("Напишите 'старт' для начала интервью.")
@@ -88,7 +90,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         default_category = categories[0]
         default_difficulty = "middle"
 
-        session = await database_sync_to_async(self.interview_service.start_interview)(
+        await database_sync_to_async(self.interview_service.start_interview)(
             self.user, default_category, default_difficulty
         )
 
@@ -108,7 +110,9 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
         self.state = InterviewState.ASKING
         await self.send_message(f"❓ **Вопрос:** {self.current_question.text}")
-        await self.send_message("💭 Обдумайте ответ и напишите его, когда будете готовы.")
+        await self.send_message(
+            "💭 Обдумайте ответ и напишите его, когда будете готовы."
+        )
 
     async def handle_start_answer(self, message: str):
         self.state = InterviewState.ANSWERING
@@ -126,9 +130,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send_message("🔄 Анализирую ваш ответ...")
 
         analysis = await self.llm_analyzer.analyze_answer(
-            self.current_question.text,
-            self.current_question.correct_answer,
-            message
+            self.current_question.text, self.current_question.correct_answer, message
         )
 
         await self.update_answer_analysis(answer, analysis)
@@ -148,15 +150,19 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"answer_chunk": "END_OF_ANSWER"}))
 
         await asyncio.sleep(1)
-        await self.send_message("➡️ Напишите 'далее' для следующего вопроса или 'стоп' для завершения.")
+        await self.send_message(
+            "➡️ Напишите 'далее' для следующего вопроса или 'стоп' для завершения."
+        )
 
     async def handle_next_question(self, message: str):
-        if message.lower() in ['далее', 'next', 'следующий']:
+        if message.lower() in ["далее", "next", "следующий"]:
             await self.ask_next_question()
-        elif message.lower() in ['стоп', 'stop', 'завершить']:
+        elif message.lower() in ["стоп", "stop", "завершить"]:
             await self.finish_interview()
         else:
-            await self.send_message("Напишите 'далее' для продолжения или 'стоп' для завершения.")
+            await self.send_message(
+                "Напишите 'далее' для продолжения или 'стоп' для завершения."
+            )
 
     async def finish_interview(self):
         self.state = InterviewState.FINISHED
@@ -175,23 +181,21 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send_message("Для начала интервью напишите: **старт**")
 
     async def send_message(self, message: str):
-        await self.send(text_data=json.dumps({
-            "answer_chunk": message + "\n\n"
-        }))
+        await self.send(text_data=json.dumps({"answer_chunk": message + "\n\n"}))
 
     @database_sync_to_async
     def get_user(self):
-        UserModel = get_user_model()
-        user, created = UserModel.objects.get_or_create(
-            username='anonymous',
-            defaults={'first_name': 'Anonymous', 'last_name': 'User'}
+        user_model = get_user_model()
+        user, created = user_model.objects.get_or_create(
+            username="anonymous",
+            defaults={"first_name": "Anonymous", "last_name": "User"},
         )
         return user
 
     @database_sync_to_async
     def update_answer_analysis(self, answer: Answer, analysis: dict):
-        answer.llm_score = analysis['score']
-        answer.llm_comment = analysis['comment']
-        answer.is_valid = analysis['is_valid']
-        answer.detailed_analysis = analysis.get('detailed_analysis', {})
+        answer.llm_score = analysis["score"]
+        answer.llm_comment = analysis["comment"]
+        answer.is_valid = analysis["is_valid"]
+        answer.detailed_analysis = analysis.get("detailed_analysis", {})
         answer.save()
