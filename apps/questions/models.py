@@ -1,6 +1,6 @@
 from django.db import models
 
-from core.models import Category
+from apps.core.models import Category
 
 
 class Question(models.Model):
