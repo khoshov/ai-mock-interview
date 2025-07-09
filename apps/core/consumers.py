@@ -49,6 +49,7 @@ chain = RunnableWithMessageHistory(
     history_messages_key="messages",
 )
 
+
 async def stream_llm_response(chain, messages, session_id):
     async for chunk in chain.astream(
         {"messages": messages},
