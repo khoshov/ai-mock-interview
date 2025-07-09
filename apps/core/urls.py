@@ -5,5 +5,5 @@ from .views import chat
 app_name = "core"
 
 urlpatterns = [
-    path("chat/", chat, name="chat"),
+    path("", chat, name="chat"),
 ]

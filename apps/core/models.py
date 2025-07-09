@@ -1,5 +1,3 @@
-import uuid
-
 from mptt.models import MPTTModel, TreeForeignKey
 
 from django.db import models
@@ -26,28 +24,3 @@ class Category(MPTTModel):
 
     def __str__(self):
         return self.name
-
-
-class ChatSession(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return str(self.pk)
-
-    @property
-    def messages(self):
-        return self.messages.all()
-
-
-class Message(models.Model):
-    session = models.ForeignKey(
-        ChatSession, on_delete=models.CASCADE, related_name="messages"
-    )
-    sender = models.CharField(max_length=10, choices=(("human", "Human"), ("ai", "AI")))
-    text = models.TextField()
-    created = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        preview = (self.text[:30] + "...") if len(self.text) > 30 else self.text
-        return f"{self.sender.capitalize()} @ {self.created.strftime('%Y-%m-%d %H:%M:%S')}:{preview}"

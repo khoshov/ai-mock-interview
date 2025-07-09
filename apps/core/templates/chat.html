@@ -47,7 +47,56 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+let ws = new WebSocket("ws://localhost:8000/ws/chat/");
+let currentBotMsgDiv = null;
+let currentBotMsgRaw = "";
+
+ws.onmessage = function(event) {
+    let data = JSON.parse(event.data);
+    let chatBox = document.getElementById("chat-box");
+
+    if (data.answer_chunk === "END_OF_ANSWER") {
+        if (currentBotMsgDiv) {
+            currentBotMsgDiv.innerHTML = "<strong>Bot:</strong> " + marked.parse(currentBotMsgRaw);
+        }
+        currentBotMsgDiv = null;
+        currentBotMsgRaw = "";
+        return;
+    }
+
+    if (!currentBotMsgDiv) {
+        currentBotMsgDiv = document.createElement("div");
+        currentBotMsgDiv.className = "msg-bot";
+        currentBotMsgDiv.innerHTML = "<strong>Bot:</strong> ";
+        chatBox.appendChild(currentBotMsgDiv);
+    }
+
+    currentBotMsgRaw += data.answer_chunk;
+    // Для потокового эффекта раскомментируйте строку ниже:
+    currentBotMsgDiv.innerHTML = "<strong>Bot:</strong> " + marked.parse(currentBotMsgRaw);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+// ДОБАВЬТЕ ЭТУ ФУНКЦИЮ:
+function sendMsg() {
+    let msgInput = document.getElementById("msg");
+    let msg = msgInput.value.trim();
+    if (!msg) return;
+    let chatBox = document.getElementById("chat-box");
+    chatBox.innerHTML += `<div class="msg-user"><strong>You:</strong> ${msg}</div>`;
+    ws.send(JSON.stringify({message: msg}));
+    msgInput.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+    currentBotMsgDiv = null;
+    currentBotMsgRaw = "";
+}
+</script>
+
+{% comment %} <script>
 let ws = new WebSocket("ws://localhost:8000/ws/chat/");
 ws.onmessage = function(event) {
     let data = JSON.parse(event.data);
@@ -65,6 +114,7 @@ function sendMsg() {
     msgInput.value = "";
     chatBox.scrollTop = chatBox.scrollHeight;
 }
-</script>
+</script> {% endcomment %}
+
 </body>
 </html>

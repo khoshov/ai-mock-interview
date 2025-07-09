@@ -62,7 +62,6 @@ THIRD_PARTY_APPS = [
     "channels",
     "mptt",
     "widget_tweaks",
-    "markdownify",
 ]
 
 LOCAL_APPS = [
