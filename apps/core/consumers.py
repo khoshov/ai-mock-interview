@@ -1,19 +1,18 @@
 import asyncio
 import json
-import markdown
 
+import markdown
 from channels.generic.websocket import AsyncWebsocketConsumer
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 
-
 from config.settings import OPENAI_API_KEY
 
 # Инициализация модели
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo", 
+    model="gpt-3.5-turbo",
     openai_api_key=OPENAI_API_KEY,
     streaming=True,
 )
@@ -57,7 +56,7 @@ chain = RunnableWithMessageHistory(
 #         await self.accept()
 
 #     async def receive(self, text_data):
-        
+
 #         data = json.loads(text_data)
 #         user_message = data.get("message", "")
 
@@ -74,7 +73,7 @@ chain = RunnableWithMessageHistory(
 
 #         # Преобразуем Markdown-ответ в HTML
 #         answer_html = markdown_to_html(answer)
-        
+
 #         history.add_ai_message(answer_html)
 
 #         await self.send(text_data=json.dumps({"answer": answer_html}))
