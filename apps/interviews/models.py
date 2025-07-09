@@ -37,7 +37,6 @@ class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     user_answer = models.TextField(blank=True)
     expert_answer = models.ForeignKey(ExpertAnswer, on_delete=models.CASCADE)
-    # Результаты LLM
     llm_score = models.FloatField(null=True, blank=True, help_text="Оценка соответствия в процентах")
     llm_comment = models.TextField(blank=True, help_text="Что не раскрыто в ответе пользователя")
     is_valid = models.BooleanField(default=True, help_text="True — ответ релевантен, False — пустой или не по теме")
