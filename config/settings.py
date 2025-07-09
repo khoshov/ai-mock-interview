@@ -128,13 +128,7 @@ DATABASES = {
 
 REDIS_HOST = env("REDIS_HOST") or "redis"
 REDIS_PORT = env.int("REDIS_PORT") or 6379
-REDIS_PASSWORD = env("REDIS_PASSWORD") or ""
-
-# Build Redis URL with optional password
-if REDIS_PASSWORD:
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
-else:
-    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 
 # =============================================================================
 # CHANNELS CONFIGURATION

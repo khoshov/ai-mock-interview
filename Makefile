@@ -71,7 +71,7 @@ reset-db:
 	$(PYTHON) manage.py reset_db
 
 format:
-	uvx ruff check --fix apps config && uvx ruff check --select I --fix apps config && uvx ruff format apps config
+	uvx ruff check --fix --unsafe-fixes apps config && uvx ruff check --select I --fix --unsafe-fixes apps config && uvx ruff format apps config
 
 lint:
 	uvx ruff check apps config
