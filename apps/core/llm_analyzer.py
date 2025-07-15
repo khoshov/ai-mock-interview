@@ -21,7 +21,7 @@ class LLMAnswerAnalyzer:
 
 ВОПРОС: {question}
 
-ЭТАЛОННЫЙ ОТВЕТ: {expert_answer}
+ЭТАЛОННЫЙ ОТВЕТ: {correct_answer}
 
 ОТВЕТ КАНДИДАТА: {user_answer}
 
@@ -109,7 +109,7 @@ class LLMAnswerAnalyzer:
 """)
 
     async def analyze_answer(
-        self, question: str, expert_answer: str, user_answer: str
+        self, question: str, correct_answer: str, user_answer: str
     ) -> dict[str, Any]:
         if not user_answer or not user_answer.strip():
             return {
@@ -156,7 +156,7 @@ class LLMAnswerAnalyzer:
 
         response = await self.llm.ainvoke(
             self.analysis_prompt.format(
-                question=question, expert_answer=expert_answer, user_answer=user_answer
+                question=question, correct_answer=correct_answer, user_answer=user_answer
             )
         )
 

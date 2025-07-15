@@ -87,8 +87,8 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             await self.send_message("❌ Нет доступных категорий вопросов.")
             return
 
-        default_category = categories[0]
-        default_difficulty = "middle"
+        default_category = categories[1]
+        default_difficulty = "junior"
 
         await database_sync_to_async(self.interview_service.start_interview)(
             self.user, default_category, default_difficulty
