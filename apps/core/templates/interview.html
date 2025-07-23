@@ -99,11 +99,9 @@
             50% { transform: scale(1.2); }
             100% { transform: scale(1); }
         }
-        .typing-indicator {
-            display: none;
-            padding: 10px;
-            font-style: italic;
-            color: #666;
+        #voice-btn.recording {
+            background-color: #dc3545;
+            color: white;
         }
     </style>
 </head>
@@ -119,9 +117,6 @@
         </div>
         <div class="card-body">
             <div id="chat-box"></div>
-            <div class="typing-indicator" id="typing-indicator">
-                Интервьюер печатает...
-            </div>
         </div>
         <div class="card-footer">
             <div class="input-group">
@@ -136,6 +131,10 @@
                 <button class="btn btn-primary" onclick="sendMsg()" id="send-btn" disabled>
                     Отправить
                 </button>
+                <button class="btn btn-secondary ms-2" id="voice-btn" title="Голосовой ввод">
+                    🎤
+                </button>
+
             </div>
         </div>
     </div>
@@ -214,14 +213,6 @@ function updateConnectionStatus() {
     }
 }
 
-function showTypingIndicator() {
-    document.getElementById("typing-indicator").style.display = "block";
-}
-
-function hideTypingIndicator() {
-    document.getElementById("typing-indicator").style.display = "none";
-}
-
 function sendMsg() {
     let msgInput = document.getElementById("msg");
     let msg = msgInput.value.trim();
@@ -244,6 +235,62 @@ function sendMsg() {
 document.addEventListener('DOMContentLoaded', function() {
     initWebSocket();
 });
+
+let mediaRecorder = null;
+let audioChunks = [];
+const voiceBtn = document.getElementById("voice-btn");
+
+voiceBtn.onclick = async () => {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        voiceBtn.classList.remove("recording");
+        voiceBtn.textContent = "🎤";
+    } else {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Ваш браузер не поддерживает запись аудио");
+            return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+                sendAudioChunk(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            // Можно что-то сделать при окончании записи
+        };
+
+        mediaRecorder.start(250);  // отправляем аудио пакетами по 250 ms
+
+        voiceBtn.classList.add("recording");
+        voiceBtn.textContent = "■";
+    }
+};
+
+function sendAudioChunk(blob) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        // Отправим сырой аудио объект (blob) как бинарный пакет (массив байт)
+        blob.arrayBuffer().then(buffer => {
+            ws.send(buffer);
+        });
+    }
+}
+
+ws.onopen = () => {
+    // ...
+    voiceBtn.disabled = false;
+};
+ws.onclose = () => {
+    // ...
+    voiceBtn.disabled = true;
+};
+
 </script>
 
 </body>

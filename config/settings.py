@@ -43,6 +43,8 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 # =============================================================================
 
 OPENAI_API_KEY = env("OPENAI_API_KEY")
+YANDEX_API_KEY = env("YANDEX_API_KEY")
+
 
 # =============================================================================
 # APPLICATION DEFINITION

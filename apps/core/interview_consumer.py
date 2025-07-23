@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import json
+import os
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -45,6 +47,18 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send_message("🎯 Добро пожаловать на техническое интервью!")
         await self.send_message("Я ваш виртуальный интервьюер. Давайте начнем!")
         await self.send_setup_options()
+        self.audio_chunks = []
+        self.audio_total_bytes = 0
+
+        # Длина одного чанка в секундах (например 5 сек)
+        self.chunk_duration_seconds = 5
+
+        # Расчёт байт за секунду (16 кГц * 2 байта на сэмпл * 1 канал)
+        self.bytes_per_second = 16000 * 2
+
+        # Папка для сохранения аудио файлов
+        self.save_dir = os.path.join("static", "audio")
+        os.makedirs(self.save_dir, exist_ok=True)
 
     async def disconnect(self, close_code):
         if self.interview_service:
@@ -73,6 +87,42 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
         except json.JSONDecodeError:
             await self.send_message("Ошибка обработки сообщения.")
+
+    async def receive_bytes(self, bytes_data):
+        self.audio_chunks.append(bytes_data)
+        self.audio_total_bytes += len(bytes_data)
+
+        # Вычисляем примерную длину накопленных данных
+        duration = self.audio_total_bytes / self.bytes_per_second
+
+        if duration >= self.chunk_duration_seconds:
+            # Объединяем все чанки в один файл
+            audio_data = b"".join(self.audio_chunks)
+
+            # Обнуляем накопители для следующего файла
+            self.audio_chunks = []
+            self.audio_total_bytes = 0
+
+            # Формируем уникальное имя файла по времени с микросекундами
+            filename = datetime.datetime.now().strftime(
+                "audio_chunk_%Y%m%d_%H%M%S_%f.pcm"
+            )
+            filepath = os.path.join(self.save_dir, filename)
+
+            # Сохраняем файл
+            with open(filepath, "wb") as f:
+                f.write(audio_data)
+
+            # Отправляем клиенту подтверждение
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "status": "chunk_saved",
+                        "file": filename,
+                        "duration_secs": duration,
+                    }
+                )
+            )
 
     async def handle_setup(self, message: str):
         if message.lower() in ["старт", "начать", "start"]:
