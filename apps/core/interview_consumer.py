@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from .llm_analyzer import LLMAnswerAnalyzer
 from .models import Category
 from .services import InterviewSessionStore
+from .tts_service import tts_service
 
 if TYPE_CHECKING:
     from questions.models import Question
@@ -34,6 +35,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         self.state = InterviewState.SETUP
         self.current_question: Question | None = None
         self.user = None
+        self.tts_enabled = False
 
     async def connect(self):
         self.session_id = self.scope["session"].session_key or self.channel_name
@@ -55,6 +57,10 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         try:
             data = json.loads(text_data)
             message = data.get("message", "").strip()
+            
+            # Проверяем настройку TTS
+            if "enable_tts" in data:
+                self.tts_enabled = data.get("enable_tts", False)
 
             if not message:
                 await self.send_message("Пожалуйста, введите сообщение.")
@@ -141,11 +147,47 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         self.state = InterviewState.FEEDBACK
 
         full_feedback = ""
+        text_buffer = ""
+        
         async for chunk in self.llm_analyzer.generate_feedback(
             self.current_question.text, message, analysis
         ):
             full_feedback += chunk
             await self.send(text_data=json.dumps({"answer_chunk": chunk}))
+            
+            # Если TTS включен, обрабатываем аудио
+            if self.tts_enabled and tts_service.is_available():
+                text_buffer += chunk
+                
+                # Проверяем завершенные предложения
+                sentence_endings = ['.', '!', '?', '\n']
+                for ending in sentence_endings:
+                    if ending in text_buffer:
+                        sentences = text_buffer.split(ending)
+                        for sentence in sentences[:-1]:
+                            sentence = sentence.strip()
+                            if sentence and len(sentence) > 10:
+                                try:
+                                    audio_b64 = tts_service.text_to_audio_base64(sentence)
+                                    await self.send(text_data=json.dumps({
+                                        "audio_chunk": audio_b64,
+                                        "audio_text": sentence
+                                    }))
+                                except Exception as e:
+                                    print(f"TTS error: {e}")
+                        text_buffer = sentences[-1]
+                        break
+
+        # Обработаем остаток текста для TTS
+        if self.tts_enabled and tts_service.is_available() and text_buffer.strip() and len(text_buffer.strip()) > 10:
+            try:
+                audio_b64 = tts_service.text_to_audio_base64(text_buffer.strip())
+                await self.send(text_data=json.dumps({
+                    "audio_chunk": audio_b64,
+                    "audio_text": text_buffer.strip()
+                }))
+            except Exception as e:
+                print(f"TTS error: {e}")
 
         await self.send(text_data=json.dumps({"answer_chunk": "END_OF_ANSWER"}))
 
@@ -182,6 +224,20 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
     async def send_message(self, message: str):
         await self.send(text_data=json.dumps({"answer_chunk": message + "\n\n"}))
+        
+        # Если TTS включен, генерируем аудио для сообщения
+        if self.tts_enabled and tts_service.is_available() and message.strip():
+            try:
+                # Убираем markdown форматирование
+                clean_message = message.replace("**", "").replace("*", "").replace("#", "").strip()
+                if len(clean_message) > 5:  # Минимальная длина для озвучки
+                    audio_b64 = tts_service.text_to_audio_base64(clean_message)
+                    await self.send(text_data=json.dumps({
+                        "audio_chunk": audio_b64,
+                        "audio_text": clean_message
+                    }))
+            except Exception as e:
+                print(f"TTS error in send_message: {e}")
 
     @database_sync_to_async
     def get_user(self):

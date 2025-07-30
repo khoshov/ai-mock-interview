@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TTS Audio Test</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>🔊 Тест TTS Аудио</h1>
+    
+    <div>
+        <h3>Тест 1: Прямое воспроизведение base64 аудио</h3>
+        <button onclick="testDirectAudio()">▶️ Тест прямого аудио</button>
+        <div id="status1"></div>
+    </div>
+    
+    <div>
+        <h3>Тест 2: WebSocket с TTS</h3>
+        <button onclick="testWebSocket()">🔗 Тест WebSocket</button>
+        <div id="status2"></div>
+    </div>
+    
+    <div>
+        <h3>Логи:</h3>
+        <div id="logs" style="background: #f0f0f0; padding: 10px; height: 200px; overflow-y: scroll;"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logs = document.getElementById('logs');
+            logs.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        async function testDirectAudio() {
+            log('🧪 Тестируем прямое аудио...');
+            document.getElementById('status1').innerHTML = '⏳ Генерирую аудио...';
+            
+            try {
+                const response = await fetch('/interview/');  // Проверяем, что сервер доступен
+                if (response.ok) {
+                    log('✅ Сервер доступен');
+                    document.getElementById('status1').innerHTML = '✅ Сервер работает. Для полного теста используйте главную страницу с WebSocket.';
+                } else {
+                    log('❌ Сервер недоступен');
+                    document.getElementById('status1').innerHTML = '❌ Ошибка подключения';
+                }
+            } catch (e) {
+                log('❌ Ошибка: ' + e.message);
+                document.getElementById('status1').innerHTML = '❌ Ошибка: ' + e.message;
+            }
+        }
+
+        function testWebSocket() {
+            log('🔗 Тестируем WebSocket...');
+            document.getElementById('status2').innerHTML = '⏳ Подключаюсь...';
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const ws = new WebSocket(`${protocol}//${host}/ws/interview/`);
+            
+            ws.onopen = function() {
+                log('✅ WebSocket подключен');
+                document.getElementById('status2').innerHTML = '🔗 Подключен, отправляю тестовое сообщение...';
+                
+                ws.send(JSON.stringify({
+                    message: 'Тест TTS системы',
+                    enable_tts: true
+                }));
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.audio_chunk) {
+                    log('🔊 Получен аудио чанк, размер: ' + data.audio_chunk.length);
+                    
+                    // Пробуем воспроизвести
+                    try {
+                        const audio = new Audio(`data:audio/wav;base64,${data.audio_chunk}`);
+                        audio.play().then(() => {
+                            log('✅ Аудио воспроизводится!');
+                            document.getElementById('status2').innerHTML = '✅ TTS работает! Аудио воспроизводится.';
+                        }).catch(e => {
+                            log('❌ Ошибка воспроизведения: ' + e.message);
+                            document.getElementById('status2').innerHTML = '⚠️ Аудио получено, но не воспроизводится: ' + e.message;
+                        });
+                    } catch (e) {
+                        log('❌ Ошибка создания аудио: ' + e.message);
+                    }
+                } else if (data.answer_chunk) {
+                    log('📝 Текст: ' + data.answer_chunk.substring(0, 50) + '...');
+                }
+            };
+            
+            ws.onerror = function(error) {
+                log('❌ WebSocket ошибка: ' + error);
+                document.getElementById('status2').innerHTML = '❌ Ошибка WebSocket';
+            };
+            
+            ws.onclose = function() {
+                log('🔌 WebSocket закрыт');
+            };
+        }
+        
+        log('🏁 Тестовая страница загружена');
+    </script>
+</body>
+</html>

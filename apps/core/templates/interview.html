@@ -124,6 +124,22 @@
             </div>
         </div>
         <div class="card-footer">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="enableTTS" checked>
+                        <label class="form-check-label" for="enableTTS">
+                            🔊 Озвучивать ответы интервьюера
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <select class="form-select form-select-sm" id="ttsModelSelect">
+                        <option value="">Загружаем модели...</option>
+                    </select>
+                    <small class="text-muted">Выберите TTS модель</small>
+                </div>
+            </div>
             <div class="input-group">
                 <input 
                     id="msg" 
@@ -147,9 +163,13 @@ let ws = null;
 let currentBotMsgDiv = null;
 let currentBotMsgRaw = "";
 let isConnected = false;
+let audioQueue = [];
+let isPlayingAudio = false;
 
 function initWebSocket() {
-    ws = new WebSocket("ws://localhost:8000/ws/interview/");
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    ws = new WebSocket(`${protocol}//${host}/ws/interview/`);
     
     ws.onopen = function(event) {
         isConnected = true;
@@ -161,6 +181,16 @@ function initWebSocket() {
     ws.onmessage = function(event) {
         let data = JSON.parse(event.data);
         let chatBox = document.getElementById("chat-box");
+        
+        // Обработка аудио чанков
+        if (data.audio_chunk) {
+            console.log('Получен аудио чанк, размер:', data.audio_chunk.length);
+            audioQueue.push(data.audio_chunk);
+            if (!isPlayingAudio) {
+                playNextAudio();
+            }
+            return;
+        }
         
         if (data.answer_chunk === "END_OF_ANSWER") {
             if (currentBotMsgDiv) {
@@ -222,6 +252,36 @@ function hideTypingIndicator() {
     document.getElementById("typing-indicator").style.display = "none";
 }
 
+function playNextAudio() {
+    if (audioQueue.length === 0) {
+        isPlayingAudio = false;
+        console.log('Очередь аудио пуста');
+        return;
+    }
+    
+    isPlayingAudio = true;
+    const audioBase64 = audioQueue.shift();
+    console.log('Воспроизводим аудио, размер base64:', audioBase64.length);
+    const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+    
+    audio.onended = function() {
+        console.log('Аудио закончено');
+        playNextAudio();
+    };
+    
+    audio.onerror = function(e) {
+        console.error('Ошибка воспроизведения аудио:', e);
+        playNextAudio();
+    };
+    
+    audio.play().then(() => {
+        console.log('Аудио запущено успешно');
+    }).catch(e => {
+        console.error('Ошибка запуска аудио:', e);
+        playNextAudio();
+    });
+}
+
 function sendMsg() {
     let msgInput = document.getElementById("msg");
     let msg = msgInput.value.trim();
@@ -233,7 +293,12 @@ function sendMsg() {
     userMsgDiv.innerHTML = `<strong>Вы:</strong> ${msg}`;
     chatBox.appendChild(userMsgDiv);
     
-    ws.send(JSON.stringify({message: msg}));
+    let enableTTS = document.getElementById("enableTTS").checked;
+    console.log('Отправляем сообщение с TTS:', enableTTS);
+    ws.send(JSON.stringify({
+        message: msg,
+        enable_tts: enableTTS
+    }));
     msgInput.value = "";
     chatBox.scrollTop = chatBox.scrollHeight;
     
@@ -241,8 +306,91 @@ function sendMsg() {
     currentBotMsgRaw = "";
 }
 
+async function loadTTSModels() {
+    try {
+        const response = await fetch('/api/tts-models/');
+        if (response.ok) {
+            const data = await response.json();
+            const select = document.getElementById('ttsModelSelect');
+            select.innerHTML = '';
+            
+            // Добавляем доступные модели
+            for (const [key, model] of Object.entries(data.available_models)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = `${model.name} - ${model.description}`;
+                select.appendChild(option);
+            }
+            
+            // Выбираем текущую модель
+            if (data.current_model && data.current_model.name) {
+                select.value = data.current_model.name;
+            }
+            
+            console.log('TTS модели загружены:', data);
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки TTS моделей:', error);
+        document.getElementById('ttsModelSelect').innerHTML = '<option>Ошибка загрузки</option>';
+    }
+}
+
+async function switchTTSModel(modelName) {
+    try {
+        const response = await fetch('/api/switch-tts-model/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ model_name: modelName })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            console.log('Модель переключена:', data.message);
+        } else {
+            console.error('Ошибка переключения модели:', data.error);
+        }
+        return data.success;
+    } catch (error) {
+        console.error('Ошибка переключения модели:', error);
+        return false;
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     initWebSocket();
+    loadTTSModels();
+    
+    // Обработчик изменения модели
+    document.getElementById('ttsModelSelect').addEventListener('change', async function(e) {
+        const modelName = e.target.value;
+        if (modelName) {
+            console.log('Переключаем на модель:', modelName);
+            const success = await switchTTSModel(modelName);
+            if (!success) {
+                alert('Не удалось переключить модель TTS');
+                // Возвращаем к предыдущему значению
+                loadTTSModels();
+            }
+        }
+    });
 });
 </script>
 

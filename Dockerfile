@@ -15,10 +15,14 @@ ENV PYTHONUNBUFFERED=1
 # Install required system packages:
 # - curl: for downloading files
 # - gettext: for Django translation utilities
+# - build-essential: gcc and other build tools for TTS compilation
+# - libsndfile1: for audio file processing
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
-    gettext && \
+    gettext \
+    build-essential \
+    libsndfile1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory inside container
