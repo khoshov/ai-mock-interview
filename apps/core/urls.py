@@ -1,6 +1,13 @@
 from django.urls import path
 
-from .views import chat, interview, test_tts, test_tts_api, get_tts_models, switch_tts_model
+from .views import (
+    chat,
+    get_tts_models,
+    interview,
+    switch_tts_model,
+    test_tts,
+    test_tts_api,
+)
 
 app_name = "core"
 

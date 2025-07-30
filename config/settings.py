@@ -267,7 +267,7 @@ if DEBUG:
         "127.0.0.1",
         "localhost",
     ]
-    
+
     # CORS settings for development
     CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOW_CREDENTIALS = True
