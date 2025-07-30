@@ -39,6 +39,14 @@
             </div>
             <div id="chat-box" class="card-body"></div>
             <div class="card-footer">
+                <div class="mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="enableTTS">
+                        <label class="form-check-label" for="enableTTS">
+                            🔊 Озвучивать ответы (Silero TTS)
+                        </label>
+                    </div>
+                </div>
                 <div class="input-group">
                     <input id="msg" type="text" class="form-control" placeholder="Введите сообщение..." onkeydown="if(event.key==='Enter'){sendMsg();}">
                     <button class="btn btn-primary" onclick="sendMsg()">Отправить</button>
@@ -50,13 +58,26 @@
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-let ws = new WebSocket("ws://localhost:8000/ws/chat/");
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const host = window.location.host;
+let ws = new WebSocket(`${protocol}//${host}/ws/chat/`);
 let currentBotMsgDiv = null;
 let currentBotMsgRaw = "";
+let audioQueue = [];
+let isPlayingAudio = false;
 
 ws.onmessage = function(event) {
     let data = JSON.parse(event.data);
     let chatBox = document.getElementById("chat-box");
+
+    // Обработка аудио чанков
+    if (data.audio_chunk) {
+        audioQueue.push(data.audio_chunk);
+        if (!isPlayingAudio) {
+            playNextAudio();
+        }
+        return;
+    }
 
     if (data.answer_chunk === "END_OF_ANSWER") {
         if (currentBotMsgDiv) {
@@ -80,13 +101,45 @@ ws.onmessage = function(event) {
     chatBox.scrollTop = chatBox.scrollHeight;
 };
 
+function playNextAudio() {
+    if (audioQueue.length === 0) {
+        isPlayingAudio = false;
+        return;
+    }
+    
+    isPlayingAudio = true;
+    const audioBase64 = audioQueue.shift();
+    const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+    
+    audio.onended = function() {
+        playNextAudio();
+    };
+    
+    audio.onerror = function(e) {
+        console.error('Ошибка воспроизведения аудио:', e);
+        playNextAudio();
+    };
+    
+    audio.play().catch(e => {
+        console.error('Ошибка запуска аудио:', e);
+        playNextAudio();
+    });
+}
+
 function sendMsg() {
     let msgInput = document.getElementById("msg");
     let msg = msgInput.value.trim();
     if (!msg) return;
+    
     let chatBox = document.getElementById("chat-box");
     chatBox.innerHTML += `<div class="msg-user"><strong>You:</strong> ${msg}</div>`;
-    ws.send(JSON.stringify({message: msg}));
+    
+    let enableTTS = document.getElementById("enableTTS").checked;
+    ws.send(JSON.stringify({
+        message: msg,
+        enable_tts: enableTTS
+    }));
+    
     msgInput.value = "";
     chatBox.scrollTop = chatBox.scrollHeight;
     currentBotMsgDiv = null;

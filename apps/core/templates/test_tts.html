@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>🔊 TTS Test Page</title>
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="text-center">🔊 Тест TTS Системы</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🧪 Тест 1: WebSocket + TTS</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="testWebSocketTTS()">▶️ Тест WebSocket</button>
+                    <div id="wsStatus" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🎵 Тест 2: Прямой TTS API</h3>
+                </div>
+                <div class="card-body">
+                    <input type="text" id="testText" class="form-control mb-2" 
+                           value="Привет! Это тест голосового синтеза." 
+                           placeholder="Введите текст для озвучки">
+                    <button class="btn btn-success" onclick="testDirectTTS()">🔊 Тест TTS</button>
+                    <div id="directStatus" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>📋 Логи тестирования</h3>
+                    <button class="btn btn-sm btn-secondary float-end" onclick="clearLogs()">Очистить</button>
+                </div>
+                <div class="card-body">
+                    <div id="logs" style="background: #f8f9fa; padding: 15px; height: 300px; overflow-y: scroll; font-family: monospace; font-size: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-info mt-4">
+        <h4>📖 Как использовать:</h4>
+        <ul>
+            <li><strong>WebSocket тест</strong> - проверяет полную интеграцию TTS с интервью</li>
+            <li><strong>Прямой TTS</strong> - тестирует API генерации аудио напрямую</li>
+            <li><strong>Проверьте браузерные настройки</strong> - разрешите автовоспроизведение звука</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+let audioQueue = [];
+let isPlayingAudio = false;
+
+function log(message, type = 'info') {
+    const logs = document.getElementById('logs');
+    const timestamp = new Date().toLocaleTimeString();
+    const color = type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : 'text-primary';
+    logs.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+    logs.scrollTop = logs.scrollHeight;
+}
+
+function clearLogs() {
+    document.getElementById('logs').innerHTML = '';
+}
+
+function playNextAudio() {
+    if (audioQueue.length === 0) {
+        isPlayingAudio = false;
+        log('🏁 Очередь аудио пуста', 'info');
+        return;
+    }
+    
+    isPlayingAudio = true;
+    const audioBase64 = audioQueue.shift();
+    log(`🔊 Воспроизводим аудио (${audioBase64.length} символов base64)`, 'info');
+    
+    const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+    
+    audio.onended = function() {
+        log('✅ Аудио завершено', 'success');
+        playNextAudio();
+    };
+    
+    audio.onerror = function(e) {
+        log('❌ Ошибка воспроизведения аудио: ' + e.message, 'error');
+        playNextAudio();
+    };
+    
+    audio.play().then(() => {
+        log('✅ Аудио запущено успешно', 'success');
+    }).catch(e => {
+        log('❌ Ошибка запуска аудио: ' + e.message, 'error');
+        playNextAudio();
+    });
+}
+
+function testWebSocketTTS() {
+    log('🔗 Начинаем тест WebSocket + TTS...', 'info');
+    document.getElementById('wsStatus').innerHTML = '<div class="alert alert-info">⏳ Подключаемся к WebSocket...</div>';
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const ws = new WebSocket(`${protocol}//${host}/ws/interview/`);
+    
+    ws.onopen = function() {
+        log('✅ WebSocket подключен', 'success');
+        document.getElementById('wsStatus').innerHTML = '<div class="alert alert-success">🔗 Подключен! Запускаем интервью...</div>';
+        
+        // Сначала отправляем команду старт
+        const startMessage = {
+            message: 'старт',
+            enable_tts: true
+        };
+        
+        ws.send(JSON.stringify(startMessage));
+        log('📤 Отправлено: старт', 'info');
+        
+        // Через 2 секунды отправим ответ на вопрос
+        setTimeout(() => {
+            const answerMessage = {
+                message: 'Это тестовый ответ для проверки системы голосового синтеза. Проверяем, что TTS правильно генерирует аудио для длинных текстов с обратной связью.',
+                enable_tts: true
+            };
+            
+            ws.send(JSON.stringify(answerMessage));
+            log('📤 Отправлен ответ: ' + answerMessage.message, 'info');
+        }, 2000);
+    };
+    
+    let audioChunksReceived = 0;
+    let textChunksReceived = 0;
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        
+        if (data.audio_chunk) {
+            audioChunksReceived++;
+            log(`🔊 Получен аудио чанк #${audioChunksReceived} (${data.audio_chunk.length} символов)`, 'success');
+            
+            audioQueue.push(data.audio_chunk);
+            if (!isPlayingAudio) {
+                playNextAudio();
+            }
+            
+        } else if (data.answer_chunk) {
+            if (data.answer_chunk === "END_OF_ANSWER") {
+                log('🏁 Получен конец ответа', 'info');
+                document.getElementById('wsStatus').innerHTML = 
+                    `<div class="alert alert-success">✅ Тест завершен!<br>
+                     📝 Текстовых чанков: ${textChunksReceived}<br>
+                     🔊 Аудио чанков: ${audioChunksReceived}</div>`;
+                
+                // Отправим команду завершения
+                setTimeout(() => {
+                    ws.send(JSON.stringify({
+                        message: 'стоп',
+                        enable_tts: false
+                    }));
+                    log('📤 Отправлено: стоп', 'info');
+                }, 1000);
+            } else {
+                textChunksReceived++;
+                log(`📝 Текст #${textChunksReceived}: ${data.answer_chunk.substring(0, 50)}...`, 'info');
+            }
+        }
+    };
+    
+    ws.onerror = function(error) {
+        log('❌ WebSocket ошибка: ' + error, 'error');
+        document.getElementById('wsStatus').innerHTML = '<div class="alert alert-danger">❌ Ошибка WebSocket соединения</div>';
+    };
+    
+    ws.onclose = function() {
+        log('🔌 WebSocket соединение закрыто', 'info');
+    };
+}
+
+async function testDirectTTS() {
+    const text = document.getElementById('testText').value;
+    if (!text.trim()) {
+        alert('Введите текст для тестирования!');
+        return;
+    }
+    
+    log('🎵 Тестируем прямой TTS API...', 'info');
+    document.getElementById('directStatus').innerHTML = '<div class="alert alert-info">⏳ Генерируем аудио...</div>';
+    
+    try {
+        const response = await fetch('/api/test-tts/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ text: text })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.audio_base64) {
+                log(`✅ Аудио сгенерировано (${data.audio_base64.length} символов base64)`, 'success');
+                
+                // Воспроизводим аудио
+                const audio = new Audio(`data:audio/wav;base64,${data.audio_base64}`);
+                audio.play().then(() => {
+                    log('✅ Прямое аудио воспроизводится!', 'success');
+                    document.getElementById('directStatus').innerHTML = '<div class="alert alert-success">✅ TTS работает! Аудио воспроизведено.</div>';
+                }).catch(e => {
+                    log('❌ Ошибка воспроизведения: ' + e.message, 'error');
+                    document.getElementById('directStatus').innerHTML = '<div class="alert alert-warning">⚠️ Аудио создано, но не воспроизводится: ' + e.message + '</div>';
+                });
+            } else {
+                throw new Error('Аудио не сгенерировано');
+            }
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    } catch (error) {
+        log('❌ Ошибка API: ' + error.message, 'error');
+        document.getElementById('directStatus').innerHTML = '<div class="alert alert-danger">❌ Ошибка: ' + error.message + '</div>';
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    log('🏁 Тестовая страница загружена и готова к использованию', 'success');
+    log('💡 Убедитесь, что браузер разрешает автовоспроизведение звука', 'info');
+});
+</script>
+</body>
+</html>
