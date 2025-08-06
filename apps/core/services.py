@@ -1,7 +1,7 @@
 import random
 from typing import Any
 
-from interviews.models import Answer, ExpertAnswer, InterviewSession
+from interviews.models import Answer, InterviewSession
 from questions.models import Question
 
 from django.contrib.auth.models import User
@@ -45,16 +45,11 @@ class InterviewService:
         if not self.current_session:
             raise ValueError("No active interview session")
 
-        expert_answer, created = ExpertAnswer.objects.get_or_create(
-            question=question, defaults={"text": question.correct_answer}
-        )
-
         answer = Answer.objects.create(
             session=self.current_session,
             user=self.current_session.user,
             question=question,
             user_answer=user_answer,
-            expert_answer=expert_answer,
         )
 
         return answer
@@ -104,3 +99,4 @@ class InterviewSessionStore:
     def clear_session(cls, session_id: str):
         if session_id in cls._sessions:
             del cls._sessions[session_id]
+
