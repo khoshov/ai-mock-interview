@@ -1,5 +1,7 @@
 import asyncio
 import json
+import tempfile
+import os
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -13,6 +15,7 @@ from .llm_analyzer import LLMAnswerAnalyzer
 from .models import Category
 from .services import InterviewSessionStore
 from .tts_service import tts_service
+from .whisper_service import whisper_service
 
 if TYPE_CHECKING:
     from questions.models import Question
@@ -53,32 +56,56 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             await database_sync_to_async(self.interview_service.finish_interview)()
         InterviewSessionStore.clear_session(self.session_id)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
+        if text_data:
+            try:
+                data = json.loads(text_data)
+                message = data.get("message", "").strip()
+
+                if "enable_tts" in data:
+                    self.tts_enabled = data.get("enable_tts", False)
+
+                if not message:
+                    await self.send_message("Пожалуйста, введите сообщение.")
+                    return
+
+                if self.state == InterviewState.SETUP:
+                    await self.handle_setup(message)
+                elif self.state == InterviewState.ASKING:
+                    await self.handle_start_answer(message)
+                elif self.state == InterviewState.ANSWERING:
+                    await self.handle_answer(message)
+                elif self.state == InterviewState.FEEDBACK:
+                    await self.handle_next_question(message)
+                else:
+                    await self.send_message("Интервью завершено.")
+
+            except json.JSONDecodeError:
+                await self.send_message("Ошибка обработки сообщения.")
+        elif bytes_data:
+            await self.handle_audio(bytes_data)
+
+    async def handle_audio(self, audio_data):
         try:
-            data = json.loads(text_data)
-            message = data.get("message", "").strip()
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio_file:
+                temp_audio_file.write(audio_data)
+                temp_audio_file_path = temp_audio_file.name
 
-            # Проверяем настройку TTS
-            if "enable_tts" in data:
-                self.tts_enabled = data.get("enable_tts", False)
+            transcribed_text = await asyncio.to_thread(whisper_service.transcribe_audio, temp_audio_file_path)
+            
+            os.remove(temp_audio_file_path)
 
-            if not message:
-                await self.send_message("Пожалуйста, введите сообщение.")
-                return
-
-            if self.state == InterviewState.SETUP:
-                await self.handle_setup(message)
-            elif self.state == InterviewState.ASKING:
-                await self.handle_start_answer(message)
-            elif self.state == InterviewState.ANSWERING:
-                await self.handle_answer(message)
-            elif self.state == InterviewState.FEEDBACK:
-                await self.handle_next_question(message)
+            if transcribed_text:
+                await self.send(text_data=json.dumps({
+                    'type': 'transcription_result',
+                    'transcript': transcribed_text
+                }))
             else:
-                await self.send_message("Интервью завершено.")
+                await self.send_message("Не удалось распознать речь. Попробуйте еще раз.")
 
-        except json.JSONDecodeError:
-            await self.send_message("Ошибка обработки сообщения.")
+        except Exception as e:
+            await self.send_message(f"Ошибка при обработке аудио: {e}")
+
 
     async def handle_setup(self, message: str):
         if message.lower() in ["старт", "начать", "start"]:

@@ -145,13 +145,19 @@
                     id="msg" 
                     type="text" 
                     class="form-control" 
-                    placeholder="Введите ваш ответ..." 
+                    placeholder="Введите ваш ответ или используйте микрофон..." 
                     onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMsg();}"
                     disabled
                 >
                 <button class="btn btn-primary" onclick="sendMsg()" id="send-btn" disabled>
                     Отправить
                 </button>
+                <button class="btn btn-secondary" id="record-btn" disabled>
+                    🎤
+                </button>
+            </div>
+            <div id="recording-indicator" style="display: none; color: red; margin-top: 10px;">
+                Запись...
             </div>
         </div>
     </div>
@@ -165,54 +171,66 @@ let currentBotMsgRaw = "";
 let isConnected = false;
 let audioQueue = [];
 let isPlayingAudio = false;
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
 
 function initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     ws = new WebSocket(`${protocol}//${host}/ws/interview/`);
+    ws.binaryType = 'blob';
     
     ws.onopen = function(event) {
         isConnected = true;
         updateConnectionStatus();
         document.getElementById("msg").disabled = false;
         document.getElementById("send-btn").disabled = false;
+        document.getElementById("record-btn").disabled = false;
     };
     
     ws.onmessage = function(event) {
-        let data = JSON.parse(event.data);
-        let chatBox = document.getElementById("chat-box");
-        
-        // Обработка аудио чанков
-        if (data.audio_chunk) {
-            console.log('Получен аудио чанк, размер:', data.audio_chunk.length);
-            audioQueue.push(data.audio_chunk);
-            if (!isPlayingAudio) {
-                playNextAudio();
+        if (typeof event.data === 'string') {
+            let data = JSON.parse(event.data);
+            let chatBox = document.getElementById("chat-box");
+            
+            if (data.type === 'transcription_result') {
+                document.getElementById('msg').value = data.transcript;
+                return;
             }
-            return;
-        }
-        
-        if (data.answer_chunk === "END_OF_ANSWER") {
-            if (currentBotMsgDiv) {
-                currentBotMsgDiv.innerHTML = marked.parse(currentBotMsgRaw);
+
+            // Обработка аудио чанков
+            if (data.audio_chunk) {
+                console.log('Получен аудио чанк, размер:', data.audio_chunk.length);
+                audioQueue.push(data.audio_chunk);
+                if (!isPlayingAudio) {
+                    playNextAudio();
+                }
+                return;
             }
-            currentBotMsgDiv = null;
-            currentBotMsgRaw = "";
-            hideTypingIndicator();
-            return;
+            
+            if (data.answer_chunk === "END_OF_ANSWER") {
+                if (currentBotMsgDiv) {
+                    currentBotMsgDiv.innerHTML = marked.parse(currentBotMsgRaw);
+                }
+                currentBotMsgDiv = null;
+                currentBotMsgRaw = "";
+                hideTypingIndicator();
+                return;
+            }
+            
+            if (!currentBotMsgDiv) {
+                currentBotMsgDiv = document.createElement("div");
+                currentBotMsgDiv.className = "msg-bot";
+                chatBox.appendChild(currentBotMsgDiv);
+                showTypingIndicator();
+            }
+            
+            currentBotMsgRaw += data.answer_chunk;
+            currentBotMsgDiv.innerHTML = marked.parse(currentBotMsgRaw);
+            
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
-        
-        if (!currentBotMsgDiv) {
-            currentBotMsgDiv = document.createElement("div");
-            currentBotMsgDiv.className = "msg-bot";
-            chatBox.appendChild(currentBotMsgDiv);
-            showTypingIndicator();
-        }
-        
-        currentBotMsgRaw += data.answer_chunk;
-        currentBotMsgDiv.innerHTML = marked.parse(currentBotMsgRaw);
-        
-        chatBox.scrollTop = chatBox.scrollHeight;
     };
     
     ws.onclose = function(event) {
@@ -220,6 +238,7 @@ function initWebSocket() {
         updateConnectionStatus();
         document.getElementById("msg").disabled = true;
         document.getElementById("send-btn").disabled = true;
+        document.getElementById("record-btn").disabled = true;
         
         setTimeout(() => {
             if (!isConnected) {
@@ -233,6 +252,44 @@ function initWebSocket() {
         isConnected = false;
         updateConnectionStatus();
     };
+}
+
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+            isRecording = true;
+            audioChunks = [];
+            document.getElementById('record-btn').innerHTML = '🛑';
+            document.getElementById('recording-indicator').style.display = 'block';
+
+            mediaRecorder.addEventListener("dataavailable", event => {
+                audioChunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                ws.send(audioBlob);
+                isRecording = false;
+                document.getElementById('record-btn').innerHTML = '🎤';
+                document.getElementById('recording-indicator').style.display = 'none';
+            });
+        });
+}
+
+function stopRecording() {
+    if (mediaRecorder) {
+        mediaRecorder.stop();
+    }
 }
 
 function updateConnectionStatus() {
@@ -378,6 +435,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initWebSocket();
     loadTTSModels();
     
+    document.getElementById('record-btn').addEventListener('click', toggleRecording);
+
     // Обработчик изменения модели
     document.getElementById('ttsModelSelect').addEventListener('change', async function(e) {
         const modelName = e.target.value;
