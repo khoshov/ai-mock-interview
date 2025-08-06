@@ -24,16 +24,6 @@ class InterviewSession(models.Model):
         return f"Session #{self.id} by {self.user}"
 
 
-class ExpertAnswer(models.Model):
-    question = models.OneToOneField(
-        Question, on_delete=models.CASCADE, related_name="expert_answer"
-    )
-    text = models.TextField()
-
-    def __str__(self):
-        return f"Expert Answer for Q{self.question.id}"
-
-
 class Answer(models.Model):
     session = models.ForeignKey(
         InterviewSession, on_delete=models.CASCADE, related_name="answers"
@@ -41,7 +31,6 @@ class Answer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     user_answer = models.TextField(blank=True)
-    expert_answer = models.ForeignKey(ExpertAnswer, on_delete=models.CASCADE)
     llm_score = models.FloatField(
         null=True, blank=True, help_text="Оценка соответствия в процентах"
     )
@@ -58,3 +47,4 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Answer by {self.user} (Q{self.question.id}, S{self.session.id}) | Score: {self.llm_score}"
+
