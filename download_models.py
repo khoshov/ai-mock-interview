@@ -30,8 +30,20 @@ def download_xtts_v2():
         print(f"❌ Ошибка при кэшировании XTTS v2: {e}")
         pass
 
+def download_whisper(model_name="tiny"):
+    """Загружает и кэширует модель Whisper."""
+    print(f"📥 Загружаем и кэшируем модель Whisper ({model_name})...")
+    try:
+        import whisper
+        whisper.load_model(model_name)
+        print(f"✅ Whisper модель ({model_name}) успешно закэширована!")
+    except Exception as e:
+        print(f"❌ Ошибка при кэшировании Whisper: {e}")
+        raise e
+
 if __name__ == "__main__":
     print("Начинаем предзагрузку моделей...")
     download_silero()
     download_xtts_v2()
+    download_whisper()
     print("Предзагрузка моделей завершена.")

@@ -17,13 +17,8 @@ ENV PYTHONUNBUFFERED=1
 # - gettext: for Django translation utilities
 # - build-essential: gcc and other build tools for TTS compilation
 # - libsndfile1: for audio file processing
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    curl \
-    gettext \
-    build-essential \
-    libsndfile1 && \
-    rm -rf /var/lib/apt/lists/*
+# - ffmpeg: for audio/video processing
+RUN apt-get update &&     apt-get install -y --no-install-recommends     curl     gettext     build-essential     libsndfile1     ffmpeg &&     rm -rf /var/lib/apt/lists/*
 
 # Set working directory inside container
 WORKDIR /app
@@ -32,12 +27,22 @@ WORKDIR /app
 # DEPENDENCY INSTALLATION
 # ======================
 # Copy dependency specification files first for better layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
 # Install Python dependencies using UV:
 # --locked: ensures exact versions from lockfile are used
 ENV UV_HTTP_TIMEOUT=300
-RUN uv sync --no-dev --locked
+RUN uv sync --no-dev
+
+# ======================
+# PRE-DOWNLOAD MODELS
+# ======================
+# Accept Coqui TTS license agreement
+ENV COQUI_TOS_AGREED=1
+# Copy only the download script first for better caching
+COPY download_models.py ./
+# Download and cache heavy models during the build process
+RUN uv run python download_models.py
 
 # ======================
 # APPLICATION CODE
@@ -45,15 +50,6 @@ RUN uv sync --no-dev --locked
 # Copy the rest of the application code
 # Note: This is done after dependency installation for better caching
 COPY . .
-
-# ======================
-# PRE-DOWNLOAD MODELS
-# ======================
-# Accept Coqui TTS license agreement
-ENV COQUI_TOS_AGREED=1
-# Download and cache heavy models during the build process
-RUN uv run python download_models.py
-
 
 # Making the file executable
 RUN chmod +x entrypoint.sh

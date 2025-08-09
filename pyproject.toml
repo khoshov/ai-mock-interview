@@ -26,4 +26,5 @@ dependencies = [
     "requests>=2.31.0",
     "django-cors-headers>=4.0.0",
     "coqui-tts>=0.22.0",
+    "openai-whisper>=20231117",
 ]
