@@ -1,5 +1,5 @@
-import torch
 from TTS.api import TTS
+import torch
 
 
 def download_silero():
