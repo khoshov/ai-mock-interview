@@ -2,7 +2,7 @@ from TTS.api import TTS
 import torch
 
 
-def def download_silero():
+def download_silero():
     """Загружает и кэширует русскую модель Silero TTS."""
     print("📥 Загружаем и кэшируем модель Silero TTS (v4)...")
     try:
