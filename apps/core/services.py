@@ -1,11 +1,11 @@
 import random
 from typing import Any
 
-from interviews.models import Answer, InterviewSession
-from questions.models import Question
-
 from django.contrib.auth.models import User
 from django.db.models import Avg
+
+from interviews.models import Answer, InterviewSession
+from questions.models import Question
 
 from .models import Category
 

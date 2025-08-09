@@ -3,12 +3,11 @@ import json
 
 import markdown
 from channels.generic.websocket import AsyncWebsocketConsumer
+from config.settings import OPENAI_API_KEY
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
-
-from config.settings import OPENAI_API_KEY
 
 from .tts_service import tts_service
 
