@@ -10,5 +10,5 @@ jobs:
           python-version: '3.12'
       - name: Install ruff
         run: pip install ruff==0.11.13
-      - name: Run ruff
-        run: ruff check .
+      - name: Run ruff with verbose output
+        run: ruff check --verbose .
