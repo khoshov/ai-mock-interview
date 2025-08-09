@@ -1,8 +1,9 @@
+from questions.models import Question
+
 from django.contrib.auth.models import User
 from django.db import models
 
 from core.models import Category
-from questions.models import Question
 
 
 class InterviewSession(models.Model):

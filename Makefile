@@ -74,7 +74,7 @@ format:
 	$(PYTHON) ruff check --fix --unsafe-fixes . && $(PYTHON) ruff check --select I --fix --unsafe-fixes . && $(PYTHON) ruff format .
 
 lint:
-	uvx ruff check apps config
+	$(PYTHON) ruff check apps config
 
 check: lint test
 
