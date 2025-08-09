@@ -1,8 +1,8 @@
-
-import torch
 from TTS.api import TTS
+import torch
 
-def download_silero():
+
+def def download_silero():
     """Загружает и кэширует русскую модель Silero TTS."""
     print("📥 Загружаем и кэшируем модель Silero TTS (v4)...")
     try:
@@ -17,7 +17,7 @@ def download_silero():
     except Exception as e:
         print(f"❌ Ошибка при кэшировании Silero: {e}")
         # Не прерываем сборку, если одна из моделей не скачалась
-        pass
+
 
 def download_xtts_v2():
     """Загружает и кэширует модель XTTS v2."""
@@ -28,18 +28,20 @@ def download_xtts_v2():
         print("✅ XTTS v2 модель успешно закэширована!")
     except Exception as e:
         print(f"❌ Ошибка при кэшировании XTTS v2: {e}")
-        pass
+
 
 def download_whisper(model_name="tiny"):
     """Загружает и кэширует модель Whisper."""
     print(f"📥 Загружаем и кэшируем модель Whisper ({model_name})...")
     try:
         import whisper
+
         whisper.load_model(model_name)
         print(f"✅ Whisper модель ({model_name}) успешно закэширована!")
     except Exception as e:
         print(f"❌ Ошибка при кэшировании Whisper: {e}")
         raise e
+
 
 if __name__ == "__main__":
     print("Начинаем предзагрузку моделей...")
