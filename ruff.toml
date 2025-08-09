@@ -59,20 +59,20 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # IMPORT SORTING (ISORT)
 # =============================================================================
 
-[lint.isort]
-# Import section order
-section-order = [
-    "future",
-    "standard-library", 
-    "third-party",
-    "django",
-    "first-party",
-    "local-folder"
-]
-
-# Custom sections
-[lint.isort.sections]
-"django" = ["django"]
+# [lint.isort]
+# # Import section order
+# section-order = [
+#     "future",
+#     "standard-library", 
+#     "third-party",
+#     "django",
+#     "first-party",
+#     "local-folder"
+# ]
+# 
+# # Custom sections
+# [lint.isort.sections]
+# "django" = ["django"]
 
 # =============================================================================
 # NAMING CONVENTIONS

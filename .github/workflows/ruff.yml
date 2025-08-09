@@ -5,14 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Debug File Structure and Content
-        run: |
-          echo "--- File list ---"
-          ls -R
-          echo "--- ruff.toml content ---"
-          cat ruff.toml
-          echo "--- apps/interviews/models.py content ---"
-          cat apps/interviews/models.py
       - uses: astral-sh/ruff-action@v3
         with:
           args: 'check --config ruff.toml'
