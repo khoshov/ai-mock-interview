@@ -5,6 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/ruff-action@v3
+      - uses: actions/setup-python@v5
         with:
-          args: 'check --config ruff.toml'
+          python-version: '3.12'
+      - name: Install ruff
+        run: pip install ruff==0.11.13
+      - name: Run ruff
+        run: ruff check .
