@@ -24,8 +24,9 @@ exclude = [
 # LINTING RULES
 # =============================================================================
 
-[lint]
 src = ["apps"]
+
+[lint]
 # Rule categories to enable
 select = [
     "E",   # pycodestyle errors
