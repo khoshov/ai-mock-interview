@@ -1,8 +1,9 @@
-from core.models import Category
 from questions.models import Question
 
 from django.contrib.auth.models import User
 from django.db import models
+
+from core.models import Category
 
 
 class InterviewSession(models.Model):
@@ -47,4 +48,3 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Answer by {self.user} (Q{self.question.id}, S{self.session.id}) | Score: {self.llm_score}"
-

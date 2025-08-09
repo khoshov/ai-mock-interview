@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 import os
 
 from channels.routing import ProtocolTypeRouter
+
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -17,9 +18,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 # Приложение ASGI должно быть определено до импорта AuthMiddlewareStack и URLRouter
 http_application = get_asgi_application()
 
-from channels.auth import AuthMiddlewareStack
-from channels.routing import URLRouter
-from core.routing import ws_urlpatterns
+from channels.auth import AuthMiddlewareStack  # noqa: E402
+from channels.routing import URLRouter  # noqa: E402
+
+from core.routing import ws_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter(
     {

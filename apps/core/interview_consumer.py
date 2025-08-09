@@ -1,7 +1,7 @@
 import asyncio
 import json
-import tempfile
 import os
+import tempfile
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -87,25 +87,31 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
     async def handle_audio(self, audio_data):
         try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio_file:
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix=".webm"
+            ) as temp_audio_file:
                 temp_audio_file.write(audio_data)
                 temp_audio_file_path = temp_audio_file.name
 
-            transcribed_text = await asyncio.to_thread(whisper_service.transcribe_audio, temp_audio_file_path)
-            
+            transcribed_text = await asyncio.to_thread(
+                whisper_service.transcribe_audio, temp_audio_file_path
+            )
+
             os.remove(temp_audio_file_path)
 
             if transcribed_text:
-                await self.send(text_data=json.dumps({
-                    'type': 'transcription_result',
-                    'transcript': transcribed_text
-                }))
+                await self.send(
+                    text_data=json.dumps(
+                        {"type": "transcription_result", "transcript": transcribed_text}
+                    )
+                )
             else:
-                await self.send_message("Не удалось распознать речь. Попробуйте еще раз.")
+                await self.send_message(
+                    "Не удалось распознать речь. Попробуйте еще раз."
+                )
 
         except Exception as e:
             await self.send_message(f"Ошибка при обработке аудио: {e}")
-
 
     async def handle_setup(self, message: str):
         if message.lower() in ["старт", "начать", "start"]:

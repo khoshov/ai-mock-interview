@@ -1,5 +1,5 @@
-
 import whisper
+
 
 class LocalWhisperService:
     def __init__(self, model_name="tiny"):
@@ -15,7 +15,7 @@ class LocalWhisperService:
         if not self.model:
             print("❌ Модель Whisper не загружена, транскрибация невозможна.")
             return None
-        
+
         try:
             print(f"🎤 Транскрибируем аудио: {audio_file_path}")
             result = self.model.transcribe(audio_file_path)
@@ -24,6 +24,7 @@ class LocalWhisperService:
         except Exception as e:
             print(f"❌ Ошибка во время транскрибации: {e}")
             return None
+
 
 # Создаем экземпляр сервиса с моделью 'tiny'
 whisper_service = LocalWhisperService(model_name="tiny")
