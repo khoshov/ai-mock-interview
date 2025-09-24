@@ -43,6 +43,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 # =============================================================================
 
 OPENAI_API_KEY = env("OPENAI_API_KEY")
+ELEVENLABS_API_KEY = env("ELEVENLABS_API_KEY", default="")
 
 # =============================================================================
 # APPLICATION DEFINITION

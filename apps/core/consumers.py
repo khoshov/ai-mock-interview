@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
 
-from .tts_service import tts_service
+from .elevenlabs_service import tts_service
 
 # Инициализация модели
 llm = ChatOpenAI(

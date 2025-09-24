@@ -15,8 +15,7 @@ from interviews.models import Answer
 from .llm_analyzer import LLMAnswerAnalyzer
 from .models import Category
 from .services import InterviewSessionStore
-from .tts_service import tts_service
-from .whisper_service import whisper_service
+from .elevenlabs_service import tts_service, stt_service
 
 if TYPE_CHECKING:
     from questions.models import Question
@@ -49,8 +48,10 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
         await self.send_message("🎯 Добро пожаловать на техническое интервью!")
-        await self.send_message("Я ваш виртуальный интервьюер. Давайте начнем!")
-        await self.send_setup_options()
+        await self.send_message("Я ваш виртуальный интервьюер. Начинаем интервью...")
+        
+        # Автоматически запускаем интервью
+        await self.setup_interview()
 
     async def disconnect(self, close_code):
         if self.interview_service:
@@ -70,9 +71,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                     await self.send_message("Пожалуйста, введите сообщение.")
                     return
 
-                if self.state == InterviewState.SETUP:
-                    await self.handle_setup(message)
-                elif self.state == InterviewState.ASKING:
+                if self.state == InterviewState.ASKING:
                     await self.handle_start_answer(message)
                 elif self.state == InterviewState.ANSWERING:
                     await self.handle_answer(message)
@@ -95,7 +94,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                 temp_audio_file_path = temp_audio_file.name
 
             transcribed_text = await asyncio.to_thread(
-                whisper_service.transcribe_audio, temp_audio_file_path
+                stt_service.transcribe_audio, temp_audio_file_path
             )
 
             os.remove(temp_audio_file_path)
@@ -114,11 +113,6 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             await self.send_message(f"Ошибка при обработке аудио: {e}")
 
-    async def handle_setup(self, message: str):
-        if message.lower() in ["старт", "начать", "start"]:
-            await self.setup_interview()
-        else:
-            await self.send_message("Напишите 'старт' для начала интервью.")
 
     async def setup_interview(self):
         categories = await database_sync_to_async(list)(Category.objects.all())
@@ -134,9 +128,10 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             self.user, default_category, default_difficulty
         )
 
-        await self.send_message("✅ Интервью начато!")
+        await self.send_message("✅ Интервью настроено!")
         await self.send_message(f"📂 Категория: {default_category.name}")
         await self.send_message(f"📊 Уровень: {default_difficulty}")
+        await self.send_message("🚀 Начинаем с первого вопроса...")
         await self.ask_next_question()
 
     async def ask_next_question(self):
@@ -151,7 +146,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         self.state = InterviewState.ASKING
         await self.send_message(f"❓ **Вопрос:** {self.current_question.text}")
         await self.send_message(
-            "💭 Обдумайте ответ и напишите его, когда будете готовы."
+            "💭 Напишите ваш ответ в чат или используйте голосовое сообщение."
         )
 
     async def handle_start_answer(self, message: str):
@@ -264,9 +259,6 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send_message(f"• Средняя оценка: {stats.get('avg_score', 0)}")
         await self.send_message(f"• Валидных ответов: {stats.get('valid_answers', 0)}")
         await self.send_message("Спасибо за участие в интервью! 👋")
-
-    async def send_setup_options(self):
-        await self.send_message("Для начала интервью напишите: **старт**")
 
     async def send_message(self, message: str):
         await self.send(text_data=json.dumps({"answer_chunk": message + "\n\n"}))

@@ -14,11 +14,9 @@ ENV PYTHONUNBUFFERED=1
 # ======================
 # Install required system packages:
 # - curl: for downloading files
-# - gettext: for Django translation utilities
-# - build-essential: gcc and other build tools for TTS compilation
-# - libsndfile1: for audio file processing
-# - ffmpeg: for audio/video processing
-RUN apt-get update &&     apt-get install -y --no-install-recommends     curl     gettext     build-essential     libsndfile1     ffmpeg &&     rm -rf /var/lib/apt/lists/*
+# - gettext: for Django translation utilities  
+# - ffmpeg: for audio/video processing (needed for ElevenLabs)
+RUN apt-get update &&     apt-get install -y --no-install-recommends     curl     gettext     ffmpeg &&     rm -rf /var/lib/apt/lists/*
 
 # Set working directory inside container
 WORKDIR /app
@@ -35,14 +33,9 @@ ENV UV_HTTP_TIMEOUT=300
 RUN uv sync --no-dev
 
 # ======================
-# PRE-DOWNLOAD MODELS
+# ElevenLabs Configuration
 # ======================
-# Accept Coqui TTS license agreement
-ENV COQUI_TOS_AGREED=1
-# Copy only the download script first for better caching
-COPY download_models.py ./
-# Download and cache heavy models during the build process
-RUN uv run python download_models.py
+# No need to download models - ElevenLabs is cloud-based
 
 # ======================
 # APPLICATION CODE
