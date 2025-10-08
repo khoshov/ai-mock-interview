@@ -85,12 +85,17 @@ class InterviewService:
             "valid_answers": valid_answers,
         }
 
+    def get_all_answers(self):
+        if not self.current_session:
+            return []
+        return list(self.current_session.answers.all().order_by('created_at'))
+
 
 class InterviewSessionStore:
     _sessions = {}
 
     @classmethod
-    def get_service(cls, session_id: str) -> InterviewService:
+    def get_service(cls, session_id: str) -> "InterviewService":
         if session_id not in cls._sessions:
             cls._sessions[session_id] = InterviewService(session_id)
         return cls._sessions[session_id]

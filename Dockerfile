@@ -27,7 +27,7 @@ WORKDIR /app
 # Copy dependency specification files first for better layer caching
 COPY pyproject.toml ./
 
-# Install Python dependencies using UV:
+    # Install Python dependencies using UV:
 # --locked: ensures exact versions from lockfile are used
 ENV UV_HTTP_TIMEOUT=300
 RUN uv sync --no-dev
