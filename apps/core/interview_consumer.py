@@ -185,7 +185,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({"answer_chunk": chunk}))
 
             # Если TTS включен, обрабатываем аудио
-            if self.tts_enabled and tts_service.is_available():
+            if self.tts_enabled and tts_service and tts_service.is_available():
                 text_buffer += chunk
 
                 # Проверяем завершенные предложения
@@ -216,6 +216,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         # Обработаем остаток текста для TTS
         if (
             self.tts_enabled
+            and tts_service
             and tts_service.is_available()
             and text_buffer.strip()
             and len(text_buffer.strip()) > 10
@@ -264,7 +265,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"answer_chunk": message + "\n\n"}))
 
         # Если TTS включен, генерируем аудио для сообщения
-        if self.tts_enabled and tts_service.is_available() and message.strip():
+        if self.tts_enabled and tts_service and tts_service.is_available() and message.strip():
             try:
                 # Убираем markdown форматирование
                 clean_message = (
