@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from openai import PermissionDeniedError
 
 from django.contrib.auth import get_user_model
 
@@ -162,81 +163,100 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             self.current_question, message
         )
 
-        await self.send_message("🔄 Анализирую ваш ответ...")
+        try:
+            await self.send_message("🔄 Анализирую ваш ответ...")
 
-        analysis = await self.llm_analyzer.analyze_answer(
-            self.current_question.text, self.current_question.correct_answer, message
-        )
+            analysis = await self.llm_analyzer.analyze_answer(
+                self.current_question.text, self.current_question.correct_answer, message
+            )
 
-        await self.update_answer_analysis(answer, analysis)
+            await self.update_answer_analysis(answer, analysis)
 
-        await self.send_message(f"📊 **Оценка:** {analysis['score']}/100")
-        await self.send_message("💬 **Обратная связь:**")
+            await self.send_message(f"📊 **Оценка:** {analysis['score']}/100")
+            await self.send_message("💬 **Обратная связь:**")
 
-        self.state = InterviewState.FEEDBACK
+            self.state = InterviewState.FEEDBACK
 
-        full_feedback = ""
-        text_buffer = ""
+            full_feedback = ""
+            text_buffer = ""
 
-        async for chunk in self.llm_analyzer.generate_feedback(
-            self.current_question.text, message, analysis
-        ):
-            full_feedback += chunk
-            await self.send(text_data=json.dumps({"answer_chunk": chunk}))
+            async for chunk in self.llm_analyzer.generate_feedback(
+                self.current_question.text, message, analysis
+            ):
+                full_feedback += chunk
+                await self.send(text_data=json.dumps({"answer_chunk": chunk}))
 
-            # Если TTS включен, обрабатываем аудио
-            if self.tts_enabled and tts_service and tts_service.is_available():
-                text_buffer += chunk
+                # Если TTS включен, обрабатываем аудио
+                if self.tts_enabled and tts_service and tts_service.is_available():
+                    text_buffer += chunk
 
-                # Проверяем завершенные предложения
-                sentence_endings = [".", "!", "?", "\n"]
-                for ending in sentence_endings:
-                    if ending in text_buffer:
-                        sentences = text_buffer.split(ending)
-                        for sentence in sentences[:-1]:
-                            sentence = sentence.strip()
-                            if sentence and len(sentence) > 10:
-                                try:
-                                    audio_b64 = tts_service.text_to_audio_base64(
-                                        sentence
-                                    )
-                                    await self.send(
-                                        text_data=json.dumps(
-                                            {
-                                                "audio_chunk": audio_b64,
-                                                "audio_text": sentence,
-                                            }
+                    # Проверяем завершенные предложения
+                    sentence_endings = [".", "!", "?", "\n"]
+                    for ending in sentence_endings:
+                        if ending in text_buffer:
+                            sentences = text_buffer.split(ending)
+                            for sentence in sentences[:-1]:
+                                sentence = sentence.strip()
+                                if sentence and len(sentence) > 10:
+                                    try:
+                                        audio_b64 = tts_service.text_to_audio_base64(
+                                            sentence
                                         )
-                                    )
-                                except Exception as e:
-                                    print(f"TTS error: {e}")
-                        text_buffer = sentences[-1]
-                        break
+                                        await self.send(
+                                            text_data=json.dumps(
+                                                {
+                                                    "audio_chunk": audio_b64,
+                                                    "audio_text": sentence,
+                                                }
+                                            )
+                                        )
+                                    except Exception as e:
+                                        print(f"TTS error: {e}")
+                            text_buffer = sentences[-1]
+                            break
 
-        # Обработаем остаток текста для TTS
-        if (
-            self.tts_enabled
-            and tts_service
-            and tts_service.is_available()
-            and text_buffer.strip()
-            and len(text_buffer.strip()) > 10
-        ):
-            try:
-                audio_b64 = tts_service.text_to_audio_base64(text_buffer.strip())
-                await self.send(
-                    text_data=json.dumps(
-                        {"audio_chunk": audio_b64, "audio_text": text_buffer.strip()}
+            # Обработаем остаток текста для TTS
+            if (
+                self.tts_enabled
+                and tts_service
+                and tts_service.is_available()
+                and text_buffer.strip()
+                and len(text_buffer.strip()) > 10
+            ):
+                try:
+                    audio_b64 = tts_service.text_to_audio_base64(text_buffer.strip())
+                    await self.send(
+                        text_data=json.dumps(
+                            {"audio_chunk": audio_b64, "audio_text": text_buffer.strip()}
+                        )
                     )
+                except Exception as e:
+                    print(f"TTS error: {e}")
+
+            await self.send(text_data=json.dumps({"answer_chunk": "END_OF_ANSWER"}))
+
+            await asyncio.sleep(1)
+            await self.send_message(
+                "➡️ Напишите 'далее' для следующего вопроса или 'стоп' для завершения."
+            )
+        
+        except PermissionDeniedError as e:
+            if "unsupported_country_region_territory" in str(e):
+                print("API-сервис недоступен из-за региональных ограничений.")
+                await self.send_message(
+                    "Сервис временно недоступен из-за региональных ограничений, попробуйте позже."
                 )
-            except Exception as e:
-                print(f"TTS error: {e}")
+                self.state = InterviewState.FEEDBACK
+                await self.send_message(
+                    "➡️ Напишите 'далее' для следующего вопроса или 'стоп' для завершения."
+                )
+            else:
+                # Перехватываем другие ошибки доступа
+                print(f"Произошла ошибка доступа к API: {e}")
+                await self.send_message("Произошла ошибка доступа к API. Пожалуйста, проверьте ваши ключи и разрешения.")
+                self.state = InterviewState.FEEDBACK
+                raise # Перевыбрасываем исключение для дальнейшего анализа, если это необходимо
 
-        await self.send(text_data=json.dumps({"answer_chunk": "END_OF_ANSWER"}))
-
-        await asyncio.sleep(1)
-        await self.send_message(
-            "➡️ Напишите 'далее' для следующего вопроса или 'стоп' для завершения."
-        )
 
     async def handle_next_question(self, message: str):
         if message.lower() in ["далее", "next", "следующий"]:
