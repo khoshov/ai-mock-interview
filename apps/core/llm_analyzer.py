@@ -4,10 +4,9 @@ import re
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from config.settings import OPENAI_API_KEY
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-
-from config.settings import OPENAI_API_KEY
 
 
 class LLMAnswerAnalyzer:

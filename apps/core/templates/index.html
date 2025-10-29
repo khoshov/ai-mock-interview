@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(214.3 31.8% 91.4%)",
+                        input: "hsl(214.3 31.8% 91.4%)",
+                        ring: "hsl(222.2 84% 4.9%)",
+                        background: "hsl(0 0% 100%)",
+                        foreground: "hsl(222.2 84% 4.9%)",
+                        primary: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)"
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(222.2 84% 4.9%)"
+                        },
+                        muted: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(215.4 16.3% 46.9%)"
+                        },
+                        accent: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(222.2 84% 4.9%)"
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 84.2% 60.2%)",
+                            foreground: "hsl(210 40% 98%)"
+                        },
+                        card: {
+                            DEFAULT: "hsl(0 0% 100%)",
+                            foreground: "hsl(222.2 84% 4.9%)"
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .animate-pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        .chat-message {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-border shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                        <span class="text-primary-foreground text-lg">🎯</span>
+                    </div>
+                    <h1 class="text-xl font-semibold text-foreground">AI Mock Interview</h1>
+                    <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span id="connection-indicator" class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span id="connection-text">Подключение...</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Mode Switcher -->
+                    <div class="flex bg-muted rounded-lg p-1">
+                        <button id="chat-mode-btn" class="px-3 py-1 rounded text-sm font-medium transition-colors text-muted-foreground hover:text-foreground">
+                            Чат
+                        </button>
+                        <button id="interview-mode-btn" class="px-3 py-1 rounded text-sm font-medium transition-colors bg-background text-foreground shadow-sm">
+                            Интервью
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        <div class="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
+            <!-- Chat Area -->
+            <div id="chat-container" class="h-96 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                <div class="text-center text-muted-foreground text-sm">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border">
+                        <span id="typing-indicator" class="hidden">Печатает...</span>
+                        <span id="ready-indicator">Готов к работе</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div class="p-4 bg-white border-t border-border">
+                <!-- Settings Row -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <!-- TTS Toggle -->
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="enable-tts" class="rounded border-input" checked>
+                        <span class="text-sm text-foreground">🔊 Озвучивать ответы</span>
+                    </label>
+
+                    <!-- Auto Mic Toggle -->
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="enable-auto-mic" class="rounded border-input">
+                        <span class="text-sm text-foreground">🎤 Автораспознавание</span>
+                    </label>
+
+                    <!-- Auto Send Toggle -->
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="enable-auto-send" class="rounded border-input">
+                        <span class="text-sm text-foreground">🚀 Автоотправка</span>
+                    </label>
+
+                    <!-- TTS Model Select -->
+                    <select id="tts-model-select" class="text-sm border border-input rounded-md px-2 py-1 bg-background">
+                        <option>Загружаем модели...</option>
+                    </select>
+                </div>
+
+                <!-- Input Area -->
+                <div class="flex gap-2">
+                    <div class="flex-1 relative">
+                        <input 
+                            type="text" 
+                            id="message-input" 
+                            placeholder="Введите ваш ответ или используйте микрофон..." 
+                            class="w-full px-4 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
+                            disabled
+                        >
+                    </div>
+                    <button 
+                        id="send-btn" 
+                        class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 transition-colors"
+                        disabled
+                    >
+                        Отправить
+                    </button>
+                    <button 
+                        id="record-btn" 
+                        class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 transition-colors"
+                        disabled
+                    >
+                        🎤
+                    </button>
+                </div>
+
+                <!-- Status Indicators -->
+                <div class="mt-2 text-xs text-muted-foreground space-y-1">
+                    <div id="listening-indicator" class="hidden flex items-center gap-1">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse-dot"></span>
+                        <span>🎤 Слушаю... (говорите естественно)</span>
+                    </div>
+                    <div id="recording-indicator" class="hidden flex items-center gap-1">
+                        <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse-dot"></span>
+                        <span>🔴 Запись...</span>
+                    </div>
+                    <div id="auto-recording-indicator" class="hidden flex items-center gap-1">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse-dot"></span>
+                        <span>🔴 Записываю речь...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global variables
+        let ws = null;
+        let currentMode = 'interview'; // 'chat' or 'interview'
+        let currentBotMsgDiv = null;
+        let currentBotMsgRaw = '';
+        let isConnected = false;
+        let audioQueue = [];
+        let isPlayingAudio = false;
+        
+        // Voice detection variables
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioContext;
+        let analyser;
+        let microphone;
+        let processor;
+        let isListening = false;
+        let silenceThreshold = 0.15;
+        let silenceTimeout = 2500;
+        let speechTimeout = null;
+        let isAutoRecording = false;
+        let autoMicEnabled = false;
+        let autoSendEnabled = false;
+        let backgroundNoiseLevel = 0;
+        let noiseCalibrationSamples = 0;
+        let isCalibrating = false;
+
+        // DOM elements
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const recordBtn = document.getElementById('record-btn');
+        const connectionIndicator = document.getElementById('connection-indicator');
+        const connectionText = document.getElementById('connection-text');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const readyIndicator = document.getElementById('ready-indicator');
+        const chatModeBtn = document.getElementById('chat-mode-btn');
+        const interviewModeBtn = document.getElementById('interview-mode-btn');
+
+        // Initialize WebSocket
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const endpoint = currentMode === 'chat' ? 'chat' : 'interview';
+            
+            ws = new WebSocket(`${protocol}//${host}/ws/${endpoint}/`);
+            ws.binaryType = 'blob';
+            
+            ws.onopen = function(event) {
+                isConnected = true;
+                updateConnectionStatus();
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                recordBtn.disabled = false;
+            };
+            
+            ws.onmessage = function(event) {
+                if (typeof event.data === 'string') {
+                    handleTextMessage(JSON.parse(event.data));
+                }
+            };
+            
+            ws.onclose = function(event) {
+                isConnected = false;
+                updateConnectionStatus();
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                recordBtn.disabled = true;
+                
+                setTimeout(() => {
+                    if (!isConnected) {
+                        initWebSocket();
+                    }
+                }, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                isConnected = false;
+                updateConnectionStatus();
+            };
+        }
+
+        // Handle text messages
+        function handleTextMessage(data) {
+            if (data.type === 'transcription_result') {
+                messageInput.value = data.transcript;
+                return;
+            }
+
+            if (data.audio_chunk) {
+                audioQueue.push(data.audio_chunk);
+                if (!isPlayingAudio) {
+                    playNextAudio();
+                }
+                return;
+            }
+            
+            if (data.answer_chunk === "END_OF_ANSWER") {
+                if (currentBotMsgDiv) {
+                    currentBotMsgDiv.innerHTML = marked.parse(currentBotMsgRaw);
+                }
+                currentBotMsgDiv = null;
+                currentBotMsgRaw = '';
+                hideTypingIndicator();
+                return;
+            }
+            
+            if (!currentBotMsgDiv) {
+                showTypingIndicator();
+                currentBotMsgDiv = document.createElement('div');
+                currentBotMsgDiv.className = 'chat-message flex gap-3 p-4 rounded-lg bg-white border border-border';
+                currentBotMsgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <span class="text-green-600 text-sm">${currentMode === 'chat' ? '🤖' : '👨‍💼'}</span>
+                    </div>
+                    <div class="flex-1 prose prose-sm max-w-none"></div>
+                `;
+                chatContainer.appendChild(currentBotMsgDiv);
+            }
+            
+            currentBotMsgRaw += data.answer_chunk;
+            const contentDiv = currentBotMsgDiv.querySelector('.prose');
+            contentDiv.innerHTML = marked.parse(currentBotMsgRaw);
+            
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Send message
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !isConnected) return;
+            
+            // Add user message to chat
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'chat-message flex gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 ml-12';
+            userMsgDiv.innerHTML = `
+                <div class="flex-1 prose prose-sm max-w-none">
+                    <strong class="text-blue-600">Вы:</strong> ${message}
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <span class="text-blue-600 text-sm">👤</span>
+                </div>
+            `;
+            chatContainer.appendChild(userMsgDiv);
+            
+            const enableTTS = document.getElementById('enable-tts').checked;
+            ws.send(JSON.stringify({
+                message: message,
+                enable_tts: enableTTS
+            }));
+            
+            messageInput.value = '';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            currentBotMsgDiv = null;
+            currentBotMsgRaw = '';
+        }
+
+        // Audio playback
+        function playNextAudio() {
+            if (audioQueue.length === 0) {
+                isPlayingAudio = false;
+                return;
+            }
+            
+            isPlayingAudio = true;
+            const audioBase64 = audioQueue.shift();
+            const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+            
+            audio.onended = function() {
+                playNextAudio();
+            };
+            
+            audio.onerror = function(e) {
+                console.error('Audio playback error:', e);
+                playNextAudio();
+            };
+            
+            audio.play().catch(e => {
+                console.error('Audio play error:', e);
+                playNextAudio();
+            });
+        }
+
+        // Voice recording functions (same as before)
+        function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                isRecording = true;
+                audioChunks = [];
+                recordBtn.textContent = '🛑';
+                document.getElementById('recording-indicator').classList.remove('hidden');
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener("stop", () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    ws.send(audioBlob);
+                    isRecording = false;
+                    recordBtn.textContent = '🎤';
+                    document.getElementById('recording-indicator').classList.add('hidden');
+                });
+            } catch (error) {
+                console.error('Recording error:', error);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+            }
+        }
+
+        // Auto voice detection (same logic as before but simplified)
+        async function startAutoListening() {
+            if (isListening) return;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                processor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                analyser.smoothingTimeConstant = 0.8;
+                analyser.fftSize = 1024;
+                
+                microphone.connect(analyser);
+                analyser.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                isListening = true;
+                document.getElementById('listening-indicator').classList.remove('hidden');
+                
+                startNoiseCalibration();
+                
+                processor.onaudioprocess = function(e) {
+                    if (!autoMicEnabled) return;
+                    
+                    const inputBuffer = e.inputBuffer.getChannelData(0);
+                    let sum = 0.0;
+                    for (let i = 0; i < inputBuffer.length; ++i) {
+                        sum += inputBuffer[i] * inputBuffer[i];
+                    }
+                    const rms = Math.sqrt(sum / inputBuffer.length);
+                    
+                    if (isCalibrating) {
+                        updateNoiseCalibration(rms);
+                    } else {
+                        detectVoiceActivity(rms);
+                    }
+                };
+            } catch (error) {
+                console.error('Auto listening error:', error);
+                document.getElementById('listening-indicator').classList.add('hidden');
+            }
+        }
+
+        function startNoiseCalibration() {
+            isCalibrating = true;
+            backgroundNoiseLevel = 0;
+            noiseCalibrationSamples = 0;
+            
+            setTimeout(() => {
+                finishNoiseCalibration();
+            }, 3000);
+        }
+
+        function updateNoiseCalibration(rms) {
+            backgroundNoiseLevel += rms;
+            noiseCalibrationSamples++;
+        }
+
+        function finishNoiseCalibration() {
+            if (noiseCalibrationSamples > 0) {
+                backgroundNoiseLevel = backgroundNoiseLevel / noiseCalibrationSamples;
+                silenceThreshold = Math.max(backgroundNoiseLevel * 8, 0.1);
+            } else {
+                silenceThreshold = 0.15;
+            }
+            isCalibrating = false;
+        }
+
+        function detectVoiceActivity(rms) {
+            if (!isAutoRecording) {
+                backgroundNoiseLevel = backgroundNoiseLevel * 0.999 + rms * 0.001;
+                const dynamicThreshold = Math.max(backgroundNoiseLevel * 10, 0.1);
+                silenceThreshold = dynamicThreshold;
+            }
+            
+            if (rms > silenceThreshold) {
+                if (!isAutoRecording) {
+                    startAutoRecording();
+                }
+                
+                if (speechTimeout) {
+                    clearTimeout(speechTimeout);
+                    speechTimeout = null;
+                }
+            } else {
+                if (isAutoRecording && !speechTimeout) {
+                    speechTimeout = setTimeout(() => {
+                        stopAutoRecording();
+                        speechTimeout = null;
+                    }, silenceTimeout);
+                }
+            }
+        }
+
+        async function startAutoRecording() {
+            if (isAutoRecording) return;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                isAutoRecording = true;
+                audioChunks = [];
+                
+                document.getElementById('auto-recording-indicator').classList.remove('hidden');
+                
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+                
+                mediaRecorder.addEventListener("stop", () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    ws.send(audioBlob);
+                    isAutoRecording = false;
+                    document.getElementById('auto-recording-indicator').classList.add('hidden');
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    if (autoSendEnabled) {
+                        setTimeout(() => {
+                            if (messageInput.value.trim()) {
+                                sendMessage();
+                            }
+                        }, 1000);
+                    }
+                });
+            } catch (error) {
+                console.error('Auto recording error:', error);
+                isAutoRecording = false;
+                document.getElementById('auto-recording-indicator').classList.add('hidden');
+            }
+        }
+
+        function stopAutoRecording() {
+            if (mediaRecorder && isAutoRecording) {
+                mediaRecorder.stop();
+            }
+        }
+
+        function stopAutoListening() {
+            if (!isListening) return;
+            
+            if (processor) {
+                processor.disconnect();
+                processor = null;
+            }
+            
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            isListening = false;
+            document.getElementById('listening-indicator').classList.add('hidden');
+        }
+
+        // UI helper functions
+        function updateConnectionStatus() {
+            if (isConnected) {
+                connectionIndicator.className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse-dot';
+                connectionText.textContent = 'Подключено';
+            } else {
+                connectionIndicator.className = 'w-2 h-2 rounded-full bg-red-500';
+                connectionText.textContent = 'Подключение...';
+            }
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.classList.remove('hidden');
+            readyIndicator.classList.add('hidden');
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.classList.add('hidden');
+            readyIndicator.classList.remove('hidden');
+        }
+
+        // Mode switching
+        function switchMode(mode) {
+            if (mode === currentMode) return;
+            
+            currentMode = mode;
+            
+            // Update UI
+            if (mode === 'chat') {
+                chatModeBtn.className = 'px-3 py-1 rounded text-sm font-medium transition-colors bg-background text-foreground shadow-sm';
+                interviewModeBtn.className = 'px-3 py-1 rounded text-sm font-medium transition-colors text-muted-foreground hover:text-foreground';
+            } else {
+                interviewModeBtn.className = 'px-3 py-1 rounded text-sm font-medium transition-colors bg-background text-foreground shadow-sm';
+                chatModeBtn.className = 'px-3 py-1 rounded text-sm font-medium transition-colors text-muted-foreground hover:text-foreground';
+            }
+            
+            // Clear chat
+            chatContainer.innerHTML = `
+                <div class="text-center text-muted-foreground text-sm">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border">
+                        <span id="typing-indicator" class="hidden">Печатает...</span>
+                        <span id="ready-indicator">Готов к работе</span>
+                    </div>
+                </div>
+            `;
+            
+            // Reconnect WebSocket
+            if (ws) {
+                ws.close();
+            }
+            initWebSocket();
+        }
+
+        // Load TTS models
+        async function loadTTSModels() {
+            try {
+                const response = await fetch('/api/tts-models/');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('tts-model-select');
+                    select.innerHTML = '';
+                    
+                    for (const [key, model] of Object.entries(data.available_models)) {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = `${model.name} - ${model.description}`;
+                        select.appendChild(option);
+                    }
+                    
+                    if (data.current_model && data.current_model.name) {
+                        select.value = data.current_model.name;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading TTS models:', error);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            loadTTSModels();
+            
+            // Send button
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // Enter key
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Record button
+            recordBtn.addEventListener('click', toggleRecording);
+            
+            // Mode switches
+            chatModeBtn.addEventListener('click', () => switchMode('chat'));
+            interviewModeBtn.addEventListener('click', () => switchMode('interview'));
+            
+            // Auto mic toggle
+            document.getElementById('enable-auto-mic').addEventListener('change', function(e) {
+                autoMicEnabled = e.target.checked;
+                
+                if (autoMicEnabled) {
+                    startAutoListening();
+                } else {
+                    stopAutoListening();
+                    if (isAutoRecording) {
+                        stopAutoRecording();
+                    }
+                }
+            });
+            
+            // Auto send toggle
+            document.getElementById('enable-auto-send').addEventListener('change', function(e) {
+                autoSendEnabled = e.target.checked;
+            });
+            
+            // TTS model change
+            document.getElementById('tts-model-select').addEventListener('change', async function(e) {
+                const modelName = e.target.value;
+                if (modelName) {
+                    try {
+                        const response = await fetch('/api/switch-tts-model/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({ model_name: modelName })
+                        });
+                        
+                        const data = await response.json();
+                        if (!data.success) {
+                            alert('Не удалось переключить модель TTS');
+                            loadTTSModels();
+                        }
+                    } catch (error) {
+                        console.error('Error switching TTS model:', error);
+                    }
+                }
+            });
+        });
+
+        // Helper function for CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

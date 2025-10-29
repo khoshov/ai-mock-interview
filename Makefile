@@ -71,10 +71,10 @@ reset-db:
 	$(PYTHON) manage.py reset_db
 
 format:
-	uvx ruff check --fix --unsafe-fixes apps config && uvx ruff check --select I --fix --unsafe-fixes apps config && uvx ruff format apps config
+	$(PYTHON) ruff check --fix --unsafe-fixes . && $(PYTHON) ruff check --select I --fix --unsafe-fixes . && $(PYTHON) ruff format .
 
 lint:
-	uvx ruff check apps config
+	$(PYTHON) ruff check apps config
 
 check: lint test
 

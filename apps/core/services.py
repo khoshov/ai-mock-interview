@@ -1,11 +1,11 @@
 import random
 from typing import Any
 
-from interviews.models import Answer, ExpertAnswer, InterviewSession
-from questions.models import Question
-
 from django.contrib.auth.models import User
 from django.db.models import Avg
+
+from interviews.models import Answer, InterviewSession
+from questions.models import Question
 
 from .models import Category
 
@@ -45,16 +45,11 @@ class InterviewService:
         if not self.current_session:
             raise ValueError("No active interview session")
 
-        expert_answer, created = ExpertAnswer.objects.get_or_create(
-            question=question, defaults={"text": question.correct_answer}
-        )
-
         answer = Answer.objects.create(
             session=self.current_session,
             user=self.current_session.user,
             question=question,
             user_answer=user_answer,
-            expert_answer=expert_answer,
         )
 
         return answer
@@ -90,12 +85,17 @@ class InterviewService:
             "valid_answers": valid_answers,
         }
 
+    def get_all_answers(self):
+        if not self.current_session:
+            return []
+        return list(self.current_session.answers.all().order_by('created_at'))
+
 
 class InterviewSessionStore:
     _sessions = {}
 
     @classmethod
-    def get_service(cls, session_id: str) -> InterviewService:
+    def get_service(cls, session_id: str) -> "InterviewService":
         if session_id not in cls._sessions:
             cls._sessions[session_id] = InterviewService(session_id)
         return cls._sessions[session_id]

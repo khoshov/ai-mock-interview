@@ -14,16 +14,9 @@ ENV PYTHONUNBUFFERED=1
 # ======================
 # Install required system packages:
 # - curl: for downloading files
-# - gettext: for Django translation utilities
-# - build-essential: gcc and other build tools for TTS compilation
-# - libsndfile1: for audio file processing
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    curl \
-    gettext \
-    build-essential \
-    libsndfile1 && \
-    rm -rf /var/lib/apt/lists/*
+# - gettext: for Django translation utilities  
+# - ffmpeg: for audio/video processing (needed for ElevenLabs)
+RUN apt-get update &&     apt-get install -y --no-install-recommends     curl     gettext     ffmpeg &&     rm -rf /var/lib/apt/lists/*
 
 # Set working directory inside container
 WORKDIR /app
@@ -32,11 +25,17 @@ WORKDIR /app
 # DEPENDENCY INSTALLATION
 # ======================
 # Copy dependency specification files first for better layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
-# Install Python dependencies using UV:
+    # Install Python dependencies using UV:
 # --locked: ensures exact versions from lockfile are used
-RUN uv sync --no-dev --locked
+ENV UV_HTTP_TIMEOUT=300
+RUN uv sync --no-dev --no-cache
+
+# ======================
+# ElevenLabs Configuration
+# ======================
+# No need to download models - ElevenLabs is cloud-based
 
 # ======================
 # APPLICATION CODE

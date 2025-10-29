@@ -17,9 +17,7 @@ services:
       - .env
     command: uv run manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./apps:/app/apps
-      - ./config:/app/config
-      - ./manage.py:/app/manage.py
+      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:

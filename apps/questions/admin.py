@@ -1,10 +1,15 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
+from import_export.forms import ExportForm
 
 from .models import Question
+from .resources import QuestionResource
 
 
 @admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
+class QuestionAdmin(ImportExportModelAdmin):
+    resource_classes = [QuestionResource]
+    # export_form_class = ExportForm
     list_display = ("text_short", "category", "difficulty", "question_type")
     list_filter = ("category", "difficulty", "question_type")
     search_fields = ("text", "correct_answer")

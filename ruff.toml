@@ -24,6 +24,8 @@ exclude = [
 # LINTING RULES
 # =============================================================================
 
+src = ["apps"]
+
 [lint]
 # Rule categories to enable
 select = [

@@ -5,19 +5,19 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .tts_service import tts_service
+from .elevenlabs_service import tts_service
+
+
+def index(request):
+    return render(request, "index.html")
 
 
 def chat(request):
-    return render(request, "chat.html")
+    return render(request, "index.html")
 
 
 def interview(request):
-    return render(request, "interview.html")
-
-
-def test_tts(request):
-    return render(request, "test_tts.html")
+    return render(request, "index.html")
 
 
 @csrf_exempt
