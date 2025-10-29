@@ -30,7 +30,7 @@ COPY pyproject.toml ./
     # Install Python dependencies using UV:
 # --locked: ensures exact versions from lockfile are used
 ENV UV_HTTP_TIMEOUT=300
-RUN uv sync --no-dev
+RUN uv sync --no-dev --no-cache
 
 # ======================
 # ElevenLabs Configuration

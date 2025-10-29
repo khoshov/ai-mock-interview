@@ -179,3 +179,5 @@ redis_data
 static_volume
 media_volume
 uv.lock
+
+csv/

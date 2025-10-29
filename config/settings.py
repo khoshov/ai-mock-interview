@@ -64,6 +64,7 @@ THIRD_PARTY_APPS = [
     "channels",
     "mptt",
     "widget_tweaks",
+    "import_export",
 ]
 
 LOCAL_APPS = [
@@ -104,7 +105,7 @@ ASGI_APPLICATION = "config.asgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates", BASE_DIR / "apps/core/templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -261,6 +262,7 @@ LOGGING = {
 # =============================================================================
 # DEVELOPMENT SETTINGS
 # =============================================================================
+
 
 if DEBUG:
     # Development-specific settings
